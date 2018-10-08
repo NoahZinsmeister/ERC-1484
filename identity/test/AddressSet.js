@@ -1,17 +1,17 @@
-const Test = artifacts.require('./Test.sol')
+const TestAddressSet = artifacts.require('./AddressSet/TestAddressSet.sol')
 
 let allAccounts
-let testInstance
+let setInstance
 async function verify (expectedLength, expectedMembers) {
   // check length
-  const length = await testInstance.length.call()
+  const length = await setInstance.length.call()
   assert.equal(length, expectedLength, 'Set has unexpected length')
   // check membership
-  const members = await testInstance.members.call()
+  const members = await setInstance.members.call()
   assert.deepEqual(members.sort(), expectedMembers.sort(), 'Set has unexpected members')
   // check contains
   await Promise.all(allAccounts.map(async member => {
-    const contains = await testInstance.contains.call(member)
+    const contains = await setInstance.contains.call(member)
     if (expectedMembers.includes(member)) {
       assert.isTrue(contains, `Unexpectedly does not contain ${member}`)
     } else {
@@ -22,21 +22,21 @@ async function verify (expectedLength, expectedMembers) {
 
 async function insert (accounts) {
   for (const account of accounts) {
-    await testInstance.insert(account)
+    await setInstance.insert(account)
   }
 }
 
 async function remove (accounts) {
   for (const account of accounts) {
-    await testInstance.remove(account)
+    await setInstance.remove(account)
   }
 }
 
-contract('Clean Room', function (accounts) {
+contract('Testing AddressSet', function (accounts) {
   allAccounts = accounts
 
-  it('Test contract deployed', async function () {
-    testInstance = await Test.new()
+  it('Example contract deployed', async function () {
+    setInstance = await TestAddressSet.new()
   })
 
   it('Set initialized correctly', async () => {

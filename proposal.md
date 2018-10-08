@@ -58,21 +58,21 @@ While the protocol allows for users to directly call identity management functio
 The following sample functions might be included in a provider:
 
 
-mintIdentityToken
-mintIdentityTokenDelegated
-addResolvers
-addResolversDelegated
-removeResolvers
-removeResolversDelegated
-hasResolver
-ownsAddress
-initiateClaim
-unclaim
-getDetails
-whitelistResolver
-isWhitelisted
-getWhitelistedResolvers
-hasToken
+- `mintIdentityToken`
+- `mintIdentityTokenDelegated`
+- `addResolvers`
+- `addResolversDelegated`
+- `removeResolvers`
+- `removeResolversDelegated`
+- `hasResolver`
+- `ownsAddress`
+- `initiateClaim`
+- `unclaim`
+- `getDetails`
+- `whitelistResolver`
+- `isWhitelisted`
+- `getWhitelistedResolvers`
+- `hasToken`
 
 ### ID backups
 Backing up a user's coreID and associated addresses is important in any digital identity scheme. While various applications of identity may have independent on-chain and off-chain backup functions, we strongly suggest a strictly off-chain backup scheme for a user's core identity. This process should be enforced by providers. We propose selective user-trust to back up private keys using Shamir's secret sharing. A user may choose services or family and friends to retain identity fragments, a subset of which are required to restore his or her `coreID`. We recognize the inherent threat in the possibility of some centralized entities acting as 'identity vaults' colluding or maintaining poor security standards, a user is able to distribute this list by selecting a variety of custodians with different recovery criteria - security words, two-factor authentication, passwords, biometrics, photo-verification, and more. Moreover, we find the threat of collusion mitigated because if a user loses trust in custodians, he or she may remove the address over which they possess fragments from their `coreID` in favor of a new acccess over which they retain control. This on-chain functionality is important since a user is otherwise unable to revoke ownership of a key distributed under a secret-sharing scheme.

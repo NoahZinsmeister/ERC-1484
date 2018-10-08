@@ -23,11 +23,11 @@ To a large extent, the functional fixedness of any given identity application ex
 This proposal attempts to solve existing identity management and interoperability challenges by introducing an aggregatory identity protocol. As identity clusters become more comprehensive, robust, and complex, all stakeholders in the digital identity ecosystem can benefit from a standard identity management protocol.
 
 ## Definitions
-`Resolvers`: smart contracts containing arbitrary information that resolves back to a user's `coreID`. A resolver may be any identity standard such as  `ERC 725`, but may also consist of other smart contracts leveraging or declaring identifying information such as a lending dApp, a credit score, a social media dApp, etc.
+- `Resolvers`: smart contracts containing arbitrary information that resolves back to a user's `coreID`. A resolver may be any identity standard such as  `ERC 725`, but may also consist of other smart contracts leveraging or declaring identifying information such as a lending dApp, a credit score, a social media dApp, etc.
 
-`coreID`: A mapping of a user's owned Ethereum addresses to a searchable string
+- `coreID`: A mapping of a user's owned Ethereum addresses to a searchable string
 
-`Providers`: Smart contracts authorized to `set` resolvers, `remove` resolvers, `add` addresses, and `remove` addresses from a user's core identity, given a signature from a user-owned address.
+- `Providers`: Smart contracts authorized to `set` resolvers, `remove` resolvers, `add` addresses, and `remove` addresses from a user's core identity, given a signature from a user-owned address.
 
 ## Specification
 A core digital identity (the center of an identity cluster) can be viewed as an omnibus account, consisting of more information than any individual identity application can contain about an individual. This omnibus identity is resolvable to an unlimited number of sub-identities. The protocol recognizes ownership of two things: addresses (Ethereum addresses) and resolvers (external entities housing any identifying information that can be resolved to the Ethereum network).

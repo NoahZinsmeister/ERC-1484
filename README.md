@@ -1,3 +1,14 @@
+---
+eip: TBD
+title: Digital Identity Aggregator
+author: Anurag Angara, Noah Zinsmeister, Shane Hampton, Andy Chorlian
+discussions-to: https://github.com/ethereum/EIPs/issues/TBD
+status: Draft
+type: Standards Track
+category: ERC
+created: 2018-10-08
+---
+
 ## Simple Summary
 Protocol for aggregating digital identity information.
 

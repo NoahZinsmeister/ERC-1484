@@ -102,6 +102,33 @@ pragma solidity ^0.4.24;
 
 contract ERCTBD {
 
+  event IdentityMinted(string identity, address identityAddress, address provider, bool delegated);
+  event ResolverAdded(string identity, address resolvers, address provider);
+  event ResolverRemoved(string identity, address resolvers, address provider);
+  event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
+  event AddressRemoved(string identity, address removedAddress, address provider);
+  
+  struct Identity {
+    AddressSet.Set identityAddresses;
+    AddressSet.Set providers;
+    AddressSet.Set resolvers;
+  }
+
+  function identityExists(string identity) public view returns (bool);
+  function hasIdentity(address _address) public view returns (bool);
+  function getIdentity(address _address) public view returns (string identity);
+  function isProviderFor(string identity, address provider) public view returns (bool);
+  function isResolverFor(string identity, address resolver) public view returns (bool);
+  function isAddressFor(string identity, address _address) public view returns (bool);
+  function getDetails(string identity) public view returns (address[] identityAddresses, address[] providers, address[] resolvers);
+  function mintIdentity(string identity, address provider) public;
+  function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
+  function addProviders(address[] providers) public;
+  function removeProviders(address[] providers) public;
+  function addResolvers(string identity, address[] resolvers) public;
+  function removeResolvers(string identity, address[] resolvers) public;
+  function addAddress(string identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
+  function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 }
 ```
 ## Additional References

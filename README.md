@@ -1,7 +1,7 @@
 ---
 eip: TBD
 title: Digital Identity Aggregator
-author: Anurag Angara, Noah Zinsmeister, Shane Hampton, Andy Chorlian
+author: Anurag Angara, Andy Chorlian, Shane Hampton, Noah Zinsmeister
 discussions-to: https://github.com/ethereum/EIPs/issues/TBD
 status: Draft
 type: Standards Track
@@ -20,25 +20,27 @@ Emerging identity standards and related frameworks proposed by the Ethereum comm
 
 To a large extent, the functional fixedness of any given identity application exists because identity applications are built *directly* on Ethereum as a protocol. Ethereum exists as a governance protocol which should lie a layer below application-specific protocols. In the case of identity, this structure allows for multiple instances of an identity to maintain interoperability. Accordingly, this proposal consists of a protocol layer in between the Ethereum network and existing identity applications.
 
-This proposal attempts to solve existing identity management and interoperability challenges by introducing an aggregatory identity protocol. As identity clusters become more comprehensive, robust, and complex, all stakeholders in the digital identity ecosystem can benefit from a standard identity management protocol.
+This proposal attempts to solve existing identity management and interoperability challenges by introducing a novel identity protocol. As identity clusters become more comprehensive, robust, and complex, all stakeholders in the digital identity ecosystem can benefit from a standard identity management protocol.
 
 ## Definitions
-- `Resolvers`: smart contracts containing arbitrary information that resolves back to a user's `coreID`. A resolver may be any identity standard such as  `ERC 725`, but may also consist of other smart contracts leveraging or declaring identifying information such as a lending dApp, a credit score, a social media dApp, etc.
+- `Identity`: The core data structure that constitutes a user's identity. Identities are denominated by a `string` variable with byte-length between 3 and 32 (inclusive). Identities consist of 3 sets of addresses: `Associated Addresses`, `Providers`, and `Resolvers`.
 
-- `coreID`: A mapping of a user's owned Ethereum addresses to a searchable string
+- `Associated Address`: An Ethereum address publicly associated with an `Identity`. In order for an address to become an `Associated Address` for ab `Identity`, the `Identity` must produce a signed message from the candidate address indicating intent to associate itself with the `Identity`, as well as a signed message from an existing `Associated Address` indicating the same. `Identity` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`.
 
-- `Providers`: Smart contracts authorized to `set` resolvers, `remove` resolvers, `add` addresses, and `remove` addresses from a user's core identity, given a signature from a user-owned address.
+- `Provider`: An Ethereum address (typically but not always a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf.
+
+- `Resolver`: A smart contract containing arbitrary information pertaining to user's `Identity`. A resolver may implement any identity standard, such as `ERC 725`, or may consist of a smart contract leveraging or declaring identifying information about `Identities`. These could include financial dApps, social media dApps, etc.
 
 ## Specification
 A core digital identity (the center of an identity cluster) can be viewed as an omnibus account, consisting of more information than any individual identity application can contain about an individual. This omnibus identity is resolvable to an unlimited number of sub-identities. The protocol recognizes ownership of two things: addresses (Ethereum addresses) and resolvers (external entities housing any identifying information that can be resolved to the Ethereum network).
 
-The specification allows for users directly, or user-approved smart contracts on a user's behalf, to establish a `coreID` and drive address-management and resolver-management for a given user. A user's `coreID` consists of a `string`-searchable Ethereum `owner_address` stored on a Universal Registry.
+The specification allows for users directly, or user-approved smart contracts on a user's behalf, to establish an `Identity` and drive address- and resolver-management for a given user. A user's `Identity` consists of a `string` stored in a Universal Identity Registry.
 
 
-### Universal Registry
-The Universal Registry should contain functionality for a user to establish their core identity and manage their Ethereum addresses and Resolvers. It is important to note that this registry fundamentally requires transactions for every aspect of building out a user's identity through both resolvers and addresses. Nonetheless, we recognize the importance of global accessibility to dApps and identity applications; accordingly, we include the option for a delegated identity-building scheme that allows smart contracts called `providers` to build out a user's identity through signatures without requiring users to pay gas costs.
+### Universal Identity Registry
+The Universal Identity Registry contains functionality for a user to establish their core identity and manage their `Associated Addresses` and `Resolvers`. It is important to note that this registry fundamentally requires transactions for every aspect of building out a user's identity through both resolvers and addresses. Nonetheless, we recognize the importance of global accessibility to dApps and identity applications; accordingly, we include the option for a delegated identity-building scheme that allows smart contracts called `Providers` to build out a user's identity through signatures without requiring users to pay gas costs.
 
-A string-based `coreID` is proposed for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all linked addresses commonly identifying an individual. Further, it creates a more complicated user experience in passing their coreID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
+A `string` is proposed for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all linked addresses commonly identifying an individual. Further, it creates a more complicated user experience in passing their coreID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
 
 ### Address Management
 The address management function is very low-level. It consists of trustlessly connecting multiple user-owned `claimed_addresses` to a user's `coreID`. It does not prescribe any special status to any given address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC-725 standard. This allows a user to access common identity data from multiple wallets while still

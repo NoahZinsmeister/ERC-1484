@@ -92,4 +92,12 @@ Backing up a user's coreID and associated addresses is important in any digital 
 
 ### Rationale
 
-### Implementation
+## Implementation
+### Solidity Interface
+```
+pragma solidity ^0.4.24;
+
+contract ERCTBD {
+
+}
+```

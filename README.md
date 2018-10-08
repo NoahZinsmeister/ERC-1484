@@ -24,7 +24,9 @@ This proposal attempts to solve existing identity management and interoperabilit
 
 ## Definitions
 `Resolvers`: smart contracts containing arbitrary information that resolves back to a user's `coreID`. A resolver may be any identity standard such as  `ERC 725`, but may also consist of other smart contracts leveraging or declaring identifying information such as a lending dApp, a credit score, a social media dApp, etc.
+
 `coreID`: A mapping of a user's owned Ethereum addresses to a searchable string
+
 `Providers`: Smart contracts authorized to `set` resolvers, `remove` resolvers, `add` addresses, and `remove` addresses from a user's core identity, given a signature from a user-owned address.
 
 ## Specification

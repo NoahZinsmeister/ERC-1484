@@ -1,3 +1,14 @@
+---
+eip: TBD
+title: Digital Identity Aggregator
+author: Anurag Angara, Noah Zinsmeister, Shane Hampton, Andy Chorlian
+discussions-to: https://github.com/ethereum/EIPs/issues/TBD
+status: Draft
+type: Standards Track
+category: ERC
+created: 2018-10-08
+---
+
 ## Simple Summary
 Protocol for aggregating digital identity information.
 
@@ -12,9 +23,11 @@ To a large extent, the functional fixedness of any given identity application ex
 This proposal attempts to solve existing identity management and interoperability challenges by introducing an aggregatory identity protocol. As identity clusters become more comprehensive, robust, and complex, all stakeholders in the digital identity ecosystem can benefit from a standard identity management protocol.
 
 ## Definitions
-`Resolvers`: smart contracts containing arbitrary information that resolves back to a user's `coreID`. A resolver may be any identity standard such as  `ERC 725`, but may also consist of other smart contracts leveraging or declaring identifying information such as a lending dApp, a credit score, a social media dApp, etc.
-`coreID`: A mapping of a user's owned Ethereum addresses to a searchable string
-`Providers`: Smart contracts authorized to `set` resolvers, `remove` resolvers, `add` addresses, and `remove` addresses from a user's core identity, given a signature from a user-owned address.
+- `Resolvers`: smart contracts containing arbitrary information that resolves back to a user's `coreID`. A resolver may be any identity standard such as  `ERC 725`, but may also consist of other smart contracts leveraging or declaring identifying information such as a lending dApp, a credit score, a social media dApp, etc.
+
+- `coreID`: A mapping of a user's owned Ethereum addresses to a searchable string
+
+- `Providers`: Smart contracts authorized to `set` resolvers, `remove` resolvers, `add` addresses, and `remove` addresses from a user's core identity, given a signature from a user-owned address.
 
 ## Specification
 A core digital identity (the center of an identity cluster) can be viewed as an omnibus account, consisting of more information than any individual identity application can contain about an individual. This omnibus identity is resolvable to an unlimited number of sub-identities. The protocol recognizes ownership of two things: addresses (Ethereum addresses) and resolvers (external entities housing any identifying information that can be resolved to the Ethereum network).
@@ -78,5 +91,20 @@ The following sample functions might be included in a provider:
 Backing up a user's coreID and associated addresses is important in any digital identity scheme. While various applications of identity may have independent on-chain and off-chain backup functions, we strongly suggest a strictly off-chain backup scheme for a user's core identity. This process should be enforced by providers. We propose selective user-trust to back up private keys using Shamir's secret sharing. A user may choose services or family and friends to retain identity fragments, a subset of which are required to restore his or her `coreID`. We recognize the inherent threat in the possibility of some centralized entities acting as 'identity vaults' colluding or maintaining poor security standards, a user is able to distribute this list by selecting a variety of custodians with different recovery criteria - security words, two-factor authentication, passwords, biometrics, photo-verification, and more. Moreover, we find the threat of collusion mitigated because if a user loses trust in custodians, he or she may remove the address over which the custodians possess fragments from their `coreID` in favor of a new access over which the user retains control. A serious collusion by custodials would likely require governance to resolve; however, we find this to be strictly better than the current standard of complete control by a single custodial as well as an enforced back-up standard that does not offer users flexibility in their selected level and nature of control. This on-chain functionality is important since a user is otherwise unable to revoke ownership of a key distributed under a secret-sharing scheme.
 
 ### Rationale
+We find that at a protocol layer, identity should contain no claim or attestation structure and should rather simply lay a trustless framework upon which arbitrarily sophisticated claim and attestation structures may lie in conjunction.
 
-### Implementation
+The main criticism of an identity layer comes from restrictiveness; we aim to limit requirements to be modular and future-proof without providing any special functioanlity for any component within the core registry. It simply allows users the option to interact on the blockchain using an arbitrarily robust identity rather than just an address.
+
+## Implementation
+### Solidity Interface
+```solidity
+pragma solidity ^0.4.24;
+
+contract ERCTBD {
+
+}
+```
+## Additional References
+
+## Copyright
+Copyright and related rights waived via [CC0](https://creativecommons.org/publicdomain/zero/1.0/).

@@ -158,6 +158,10 @@ contract ERCTBD {
   function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 }
 ```
+## Backwards Compatibility
+`coreIDs` established under this standard are built from existing Ethereum addresses; accordingly, identity construction has no backwards compatibility issues. 
+Deployed, non-upgradeable smart contracts that wish to become `Resolvers` to a user's `coreID` will require wrapper contracts for `setResolver` and `removeResolver` functions. They will preserve all prior functionality. 
+
 ## Additional References
 
 ## Copyright

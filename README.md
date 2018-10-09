@@ -128,7 +128,7 @@ Returns the `identity` associated with the passed `_address`. Throws if no such 
 function getIdentity(address _address) public view returns (string identity);
 ```
 
-### isProviderFor
+#### isProviderFor
 
 Returns a `bool` indicating whether or not the passed `provider` is assigned to the passed `identity`.
 
@@ -136,7 +136,7 @@ Returns a `bool` indicating whether or not the passed `provider` is assigned to 
 function isProviderFor(string identity, address provider) public view returns (bool);
 ```
 
-### isResolverFor
+#### isResolverFor
 
 Returns a `bool` indicating whether or not the passed `resolver` is assigned to the passed `identity`.
 
@@ -144,7 +144,7 @@ Returns a `bool` indicating whether or not the passed `resolver` is assigned to 
 function isResolverFor(string identity, address resolver) public view returns (bool);
 ```
 
-### isAddressFor
+#### isAddressFor
 
 Returns a `bool` indicating whether or not the passed `_address` is owned by the passed `identity`.
 
@@ -152,7 +152,7 @@ Returns a `bool` indicating whether or not the passed `_address` is owned by the
 function isAddressFor(string identity, address _address) public view returns (bool);
 ```
 
-### getDetails
+#### getDetails
 
 Returns three `address` arrays of `identityAddresses`, `providers` and `resolvers`. All of these arrays represent the addresses associated with the passed `identity`.
 
@@ -160,7 +160,7 @@ Returns three `address` arrays of `identityAddresses`, `providers` and `resolver
 function getDetails(string identity) public view returns (address[] identityAddresses, address[] providers, address[] resolvers);
 ```
 
-### mintIdentity
+#### mintIdentity
 
 Mints an `Identity` with the passed `identity` and `provider`.
 
@@ -168,7 +168,7 @@ Mints an `Identity` with the passed `identity` and `provider`.
 function mintIdentity(string identity, address provider) public;
 ```
 
-### mintIdentityDelegated
+#### mintIdentityDelegated
 
 Preforms the same logic as `mintIdentity`, but can be called by a `provider`. This function requires a signature for the `identityAddress` to confirm their consent.
 
@@ -176,7 +176,7 @@ Preforms the same logic as `mintIdentity`, but can be called by a `provider`. Th
 function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
 ```
 
-### addProviders
+#### addProviders
 
 Adds an array of `providers` to the `Identity` of the `msg.sender`.
 
@@ -184,7 +184,7 @@ Adds an array of `providers` to the `Identity` of the `msg.sender`.
 function addProviders(address[] providers) public;
 ```
 
-### removeProviders
+#### removeProviders
 
 Removes an array of `providers` from the `Identity` of the `msg.sender`.
 
@@ -192,7 +192,7 @@ Removes an array of `providers` from the `Identity` of the `msg.sender`.
 function removeProviders(address[] providers) public;
 ```
 
-### addResolvers
+#### addResolvers
 
 Adds an array of `resolvers` to the passed `identity`. This must be called by a `provider`.
 
@@ -200,7 +200,7 @@ Adds an array of `resolvers` to the passed `identity`. This must be called by a 
 function addResolvers(string identity, address[] resolvers) public;
 ```
 
-### removeResolvers
+#### removeResolvers
 
 Removes an array of `resolvers` from the passed `identity`. This must be called by a `provider`.
 
@@ -208,7 +208,7 @@ Removes an array of `resolvers` from the passed `identity`. This must be called 
 function removeResolvers(string identity, address[] resolvers) public;
 ```
 
-### addAddress
+#### addAddress
 
 Adds the `addressToAdd` to the passed `identity`. Requires signatures from both the `addressToAdd` and the `approvingAddress`.
 
@@ -216,7 +216,7 @@ Adds the `addressToAdd` to the passed `identity`. Requires signatures from both 
 function addAddress(string identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
 ```
 
-### removeAddress
+#### removeAddress
 
 Removes an `addressToRemove` from the passed `identity`. Requires a signature from the `addressToRemove`.
 
@@ -224,7 +224,7 @@ Removes an `addressToRemove` from the passed `identity`. Requires a signature fr
 function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 ```
 
-### Solidity Interface
+#### Solidity Interface
 ```solidity
 pragma solidity ^0.4.24;
 

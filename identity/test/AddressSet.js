@@ -1,4 +1,4 @@
-const TestAddressSet = artifacts.require('./AddressSet/TestAddressSet.sol')
+const AddressSetExample = artifacts.require('./examples/AddressSetExample.sol')
 
 let allAccounts
 let setInstance
@@ -36,10 +36,10 @@ contract('Testing AddressSet', function (accounts) {
   allAccounts = accounts
 
   it('Example contract deployed', async function () {
-    setInstance = await TestAddressSet.new()
+    setInstance = await AddressSetExample.new()
   })
 
-  it('Set initialized correctly', async () => {
+  it('Set initialized correctly', async function () {
     await verify(0, [])
   })
 

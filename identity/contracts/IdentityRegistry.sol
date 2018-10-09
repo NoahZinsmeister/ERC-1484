@@ -141,7 +141,7 @@ contract IdentityRegistry is SignatureVerifier {
         emit IdentityMinted(identity, identityAddress, provider, delegated);
     }
 
-    // add a provider from the identity associated with the msg.sender
+    // allows addresses associated with an identity to add providers
     function addProviders(address[] providers) public {
         Identity storage _identity = identityDirectory[getIdentity(msg.sender)];
         for (uint i; i < providers.length; i++) {
@@ -149,7 +149,7 @@ contract IdentityRegistry is SignatureVerifier {
         }
     }
 
-    // remove a provider from the identity associated with the msg.sender
+    // allows addresses associated with an identity to add providers
     function removeProviders(address[] providers) public {
         Identity storage _identity = identityDirectory[getIdentity(msg.sender)];
         for (uint i; i < providers.length; i++) {

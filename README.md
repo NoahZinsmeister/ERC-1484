@@ -1,7 +1,7 @@
 ---
 eip: TBD
 title: Digital Identity Aggregator
-author: Anurag Angara, Andy Chorlian, Shane Hampton, Noah Zinsmeister
+author: Anurag Angara, Andy Chorlian, Shane Hampton, Noah Zinsmeister <noahwz@gmail.com>
 discussions-to: https://github.com/ethereum/EIPs/issues/TBD
 status: Draft
 type: Standards Track
@@ -10,15 +10,15 @@ created: 2018-10-08
 ---
 
 ## Simple Summary
-Protocol for aggregating digital identity information.
+A protocol for aggregating digital identity information that's broadly interoperable with existing, proposed, and hypothetical future digital identity standards.
 
 ## Abstract
-This is a proposal for an identity management and aggregation framework on the Ethereum blockchain. It includes a set of standard functions to manage identity applications that are all tied to a unique core identity.
+This EIP proposes a identity management and aggregation framework on the Ethereum blockchain. It allows users to claim an identity via a singular `Identity Registry` smart contract, associate it with other Ethereum addresses, and use it to interface with smart contracts providing arbitrarily complex identity-related functionality.
 
 ## Motivation
-Emerging identity standards and related frameworks proposed by the Ethereum community (including ERC/EIP 725, 735, 780, 1056, etc.) add value to an individual's digital identity in various ways. As these and new standards come along - in addition to many other isolated, non-standard instances of identity in the global digital ecosystem - the on-chain management of multiple identities will likely become burdensome and involve the unnecessary duplication of work.
+Emerging identity standards and related frameworks proposed by the Ethereum community (including ERCs/EIPs [725](https://github.com/ethereum/EIPs/issues/725), [735](https://github.com/ethereum/EIPs/issues/735), [780](https://github.com/ethereum/EIPs/issues/780), [1056](https://github.com/ethereum/EIPs/issues/1056), etc.) add value to an individual's digital identity in a variety of ways. As these and new standards come along - in addition to many other isolated, non-standard instances of identity in the global digital ecosystem - the management of multiple identities will likely become burdensome and involve unnecessary duplication of work.
 
-To a large extent, the functional fixedness of any given identity application exists because identity applications are built *directly* on Ethereum as a protocol. Ethereum exists as a governance protocol which should lie a layer below application-specific protocols. In the case of identity, this structure allows for multiple instances of an identity to maintain interoperability. Accordingly, this proposal consists of a protocol layer in between the Ethereum network and existing identity applications.
+To a large extent, the a given identity application exists because identity applications are built *directly* on Ethereum as a protocol. Ethereum exists as a governance protocol which should lie a layer below application-specific protocols. In the case of identity, this structure allows for multiple instances of an identity to maintain interoperability. Accordingly, this proposal consists of a protocol layer in between the Ethereum network and existing identity applications.
 
 This proposal attempts to solve existing identity management and interoperability challenges by introducing a novel identity protocol. As identity clusters become more comprehensive, robust, and complex, all stakeholders in the digital identity ecosystem can benefit from a standard identity management protocol.
 
@@ -27,7 +27,7 @@ This proposal attempts to solve existing identity management and interoperabilit
 
 - `Associated Address`: An Ethereum address publicly associated with an `Identity`. In order for an address to become an `Associated Address` for ab `Identity`, the `Identity` must produce a signed message from the candidate address indicating intent to associate itself with the `Identity`, as well as a signed message from an existing `Associated Address` indicating the same. `Identity` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`.
 
-- `Provider`: An Ethereum address (typically but not always a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf.
+- `Provider`: An Ethereum address (typically but not by definition a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf.
 
 - `Resolver`: A smart contract containing arbitrary information pertaining to user's `Identity`. A resolver may implement any identity standard, such as `ERC 725`, or may consist of a smart contract leveraging or declaring identifying information about `Identities`. These could include financial dApps, social media dApps, etc.
 
@@ -40,7 +40,7 @@ The specification allows for users directly, or user-approved smart contracts on
 ### Universal Identity Registry
 The Universal Identity Registry contains functionality for a user to establish their core identity and manage their `Associated Addresses` and `Resolvers`. It is important to note that this registry fundamentally requires transactions for every aspect of building out a user's identity through both resolvers and addresses. Nonetheless, we recognize the importance of global accessibility to dApps and identity applications; accordingly, we include the option for a delegated identity-building scheme that allows smart contracts called `Providers` to build out a user's identity through signatures without requiring users to pay gas costs.
 
-A `string` is proposed for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all linked addresses commonly identifying an individual. Further, it creates a more complicated user experience in passing their coreID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
+We propose that `Identities` be denominated by a `string` for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all linked addresses commonly identifying an individual. Further, it creates a more complicated user experience in passing their coreID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
 
 ### Address Management
 The address management function is very low-level. It consists of trustlessly connecting multiple user-owned `claimed_addresses` to a user's `coreID`. It does not prescribe any special status to any given address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC-725 standard. This allows a user to access common identity data from multiple wallets while still
@@ -95,9 +95,34 @@ Backing up a user's coreID and associated addresses is important in any digital 
 ### Rationale
 We find that at a protocol layer, identity should contain no claim or attestation structure and should rather simply lay a trustless framework upon which arbitrarily sophisticated claim and attestation structures may lie in conjunction.
 
-The main criticism of an identity layer comes from restrictiveness; we aim to limit requirements to be modular and future-proof without providing any special functioanlity for any component within the core registry. It simply allows users the option to interact on the blockchain using an arbitrarily robust identity rather than just an address.
+The main criticism of an identity layer comes from restrictiveness; we aim to limit requirements to be modular and future-proof without providing any special functionality for any component within the core registry. It simply allows users the option to interact on the blockchain using an arbitrarily robust identity rather than just an address.
 
 ## Implementation
+
+#### identityExists
+
+Returns a `bool` indicating whether or not an `Identity` denominated by the passed `identity` string exists.
+
+```solidity
+function identityExists(string identity) public view returns (bool);
+```
+
+#### hasIdentity
+
+Returns a `bool` indicating whether or not the passed `_address` is associated with an `Identity`.
+
+```solidity
+function hasIdentity(address _address) public view returns (bool);
+```
+
+#### hasIdentity
+
+Returns the `identity` associated with the passed `_address`. Throws if no such `identity` exists.
+
+```solidity
+function getIdentity(address _address) public view returns (string identity);
+```
+
 ### Solidity Interface
 ```solidity
 pragma solidity ^0.4.24;
@@ -109,7 +134,7 @@ contract ERCTBD {
   event ResolverRemoved(string identity, address resolvers, address provider);
   event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
   event AddressRemoved(string identity, address removedAddress, address provider);
-  
+
   struct Identity {
     AddressSet.Set identityAddresses;
     AddressSet.Set providers;

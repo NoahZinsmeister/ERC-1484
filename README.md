@@ -25,7 +25,7 @@ This proposal attempts to solve existing identity management and interoperabilit
 ## Definitions
 - `Identity`: The core data structure that constitutes a user's identity. Identities are denominated by a `string` variable with byte-length between 3 and 32 (inclusive). Identities consist of 3 sets of addresses: `Associated Addresses`, `Providers`, and `Resolvers`.
 
-- `Associated Address`: An Ethereum address publicly associated with an `Identity`. In order for an address to become an `Associated Address` for ab `Identity`, the `Identity` must produce a signed message from the candidate address indicating intent to associate itself with the `Identity`, as well as a signed message from an existing `Associated Address` indicating the same. `Identity` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`.
+- `Associated Address`: An Ethereum address publicly associated with an `Identity`. In order for an address to become an `Associated Address` for an `Identity`, the `Identity` must produce a signed message from the candidate address indicating intent to associate itself with the `Identity`, as well as a signed message from an existing `Associated Address` indicating the same. `Identity` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`.
 
 - `Provider`: An Ethereum address (typically but not by definition a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf.
 
@@ -49,11 +49,15 @@ The address management function is very low-level. It consists of trustlessly co
 
 Trustlessness in the address management function is achieved through a signature and verification scheme that requires two transactions - one from an address already within the registry and one from the address to be claimed.
 We propose the following functions within the Universal Registry:
+
 `createCoreID`: requires that the user sign: `hash("Create core ID", address, coreID, provider)` after which a transaction can be submitted that includes [`address`, `coreID`, `provider`, `signature`]. Importantly, the transaction need not come from the original user, which allows entities, governments, etc to bear the overhead of creating a core identity.
 
 `initiateClaim`: `hash(addressToClaim, secret, coreID)`
+
 `delegatedInitiateClaim`: `hash(signature, addressToClaim, secret, coreID)`
+
 `finalizeClaim`: transact with `secret` and `coreID`
+
 `removeAddress`: transact from a claimed address with `addressToRemove`
 
 
@@ -61,7 +65,9 @@ We propose the following functions within the Universal Registry:
 The resolver management function is similarly low-level. It considers a resolver to be any smart contract that encodes information which resolves to a user's core identity. It does not set a standard for specific information that can be encoded in a resolver, rather remaining agnostic to the nature of information itself.
 
 `setResolver`: transact with `resolverAddress`
+
 `delegatedSetResolver`: transact with `signature` and `resolverAddress`
+
 `removeResolver`: transact with `resolverAddress`
 
 The resolver standard is primarily what makes this ERC an identity protocol rather than an identity application. Resolvers resolve data about an atomic entity, the coreID, in the form of arbitrarily complex smart contracts rather than a pre-defined attestation structure.
@@ -71,7 +77,6 @@ While the protocol allows for users to directly call identity management functio
 
 
 The following sample functions might be included in a provider:
-
 
 - `mintIdentityToken`
 - `mintIdentityTokenDelegated`
@@ -115,7 +120,7 @@ Returns a `bool` indicating whether or not the passed `_address` is associated w
 function hasIdentity(address _address) public view returns (bool);
 ```
 
-#### hasIdentity
+#### getIdentity
 
 Returns the `identity` associated with the passed `_address`. Throws if no such `identity` exists.
 
@@ -159,8 +164,8 @@ contract ERCTBD {
 }
 ```
 ## Backwards Compatibility
-`coreIDs` established under this standard are built from existing Ethereum addresses; accordingly, identity construction has no backwards compatibility issues. 
-Deployed, non-upgradeable smart contracts that wish to become `Resolvers` to a user's `coreID` will require wrapper contracts for `setResolver` and `removeResolver` functions. They will preserve all prior functionality. 
+`coreIDs` established under this standard are built from existing Ethereum addresses; accordingly, identity construction has no backwards compatibility issues.
+Deployed, non-upgradeable smart contracts that wish to become `Resolvers` to a user's `coreID` will require wrapper contracts for `setResolver` and `removeResolver` functions. They will preserve all prior functionality.
 
 ## Additional References
 

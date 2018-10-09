@@ -1,7 +1,7 @@
 ---
 eip: TBD
 title: Digital Identity Aggregator
-author: Anurag Angara <anurag.angara@gmail.com>, Andy Chorlian, Shane Hampton, Noah Zinsmeister <noahwz@gmail.com>
+author: Anurag Angara <anurag.angara@gmail.com>, Andy Chorlian <andychorlian@gmail.com>, Shane Hampton, Noah Zinsmeister <noahwz@gmail.com>
 discussions-to: https://github.com/ethereum/EIPs/issues/TBD
 status: Draft
 type: Standards Track

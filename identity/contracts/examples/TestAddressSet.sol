@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import "./AddressSet.sol";
+import "../AddressSet/AddressSet.sol";
 
 
 contract TestAddressSet {

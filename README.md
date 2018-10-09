@@ -1,7 +1,7 @@
 ---
 eip: TBD
 title: Digital Identity Aggregator
-author: Anurag Angara, Andy Chorlian, Shane Hampton, Noah Zinsmeister <noahwz@gmail.com>
+author: Anurag Angara <anurag.angara@gmail.com>, Andy Chorlian, Shane Hampton, Noah Zinsmeister <noahwz@gmail.com>
 discussions-to: https://github.com/ethereum/EIPs/issues/TBD
 status: Draft
 type: Standards Track
@@ -44,7 +44,7 @@ The protocol revolves around claiming an Identity, setting a `Provider` and mana
 ### Identity Registry
 The Identity Registry contains functionality for a user to establish their core identity and manage their `Providers`, `Associated Addresses`, and `Resolvers`. It is important to note that this registry fundamentally requires transactions for every aspect of building out a user's identity through both resolvers and addresses. Nonetheless, we recognize the importance of global accessibility to dApps and identity applications. Accordingly, we include the option for a delegated identity-building scheme that allows smart contracts called `Providers` to build out a user's identity through signatures without requiring users to pay gas costs.
 
-We propose that `Identities` be denominated by a `string` for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all linked addresses commonly identifying an individual. Further, it creates a more complicated user experience in passing their coreID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
+We propose that `Identities` be denominated by a `string` for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all `Associated Addresses` commonly identifying an individual. Further, it creates a more complicated user experience in passing their ID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
 
 ### Address Management
 The address management function consists of trustlessly connecting multiple user-owned `Associated Addresses` to a user's `Identity`. It does not prescribe any special status to any given address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC 725 standard. This allows a user to access common identity data from multiple wallets while still
@@ -54,8 +54,11 @@ The address management function consists of trustlessly connecting multiple user
 Trustlessness in the address management function is achieved through a signature and verification scheme that requires two transactions - one from an address already within the registry and one from the address to be claimed. This logic is implemented in . Importantly, the transaction need not come from the original user, which allows entities, governments, etc to bear the overhead of creating a core identity.
 
 `initiateClaim`: `hash(addressToClaim, secret, coreID)`
+
 `delegatedInitiateClaim`: `hash(signature, addressToClaim, secret, coreID)`
+
 `finalizeClaim`: transact with `secret` and `coreID`
+
 `removeAddress`: transact from a claimed address with `addressToRemove`
 
 
@@ -63,7 +66,9 @@ Trustlessness in the address management function is achieved through a signature
 The resolver management function is similarly low-level. It considers a resolver to be any smart contract that encodes information which resolves to a user's core identity. It does not set a standard for specific information that can be encoded in a resolver, rather remaining agnostic to the nature of information itself.
 
 `setResolver`: transact with `resolverAddress`
+
 `delegatedSetResolver`: transact with `signature` and `resolverAddress`
+
 `removeResolver`: transact with `resolverAddress`
 
 The resolver standard is primarily what makes this ERC an identity protocol rather than an identity application. Resolvers resolve data about an atomic entity, the coreID, in the form of arbitrarily complex smart contracts rather than a pre-defined attestation structure.
@@ -94,7 +99,7 @@ Returns a `bool` indicating whether or not the passed `_address` is associated w
 function hasIdentity(address _address) public view returns (bool);
 ```
 
-#### hasIdentity
+#### getIdentity
 
 Returns the `identity` associated with the passed `_address`. Throws if no such `identity` exists.
 

@@ -107,6 +107,102 @@ Returns the `identity` associated with the passed `_address`. Throws if no such 
 function getIdentity(address _address) public view returns (string identity);
 ```
 
+### isProviderFor
+
+Returns a `bool` indicating whether or not the passed `provider` is assigned to the passed `identity`.
+
+```solidity
+function isProviderFor(string identity, address provider) public view returns (bool);
+```
+
+### isResolverFor
+
+Returns a `bool` indicating whether or not the passed `resolver` is assigned to the passed `identity`.
+
+```solidity
+function isResolverFor(string identity, address resolver) public view returns (bool);
+```
+
+### isAddressFor
+
+Returns a `bool` indicating whether or not the passed `_address` is owned by the passed `identity`.
+
+```solidity
+function isAddressFor(string identity, address _address) public view returns (bool);
+```
+
+### getDetails
+
+Returns three `address` arrays of `identityAddresses`, `providers` and `resolvers`. All of these arrays represent the addresses associated with the passed `identity`.
+
+```solidity
+function getDetails(string identity) public view returns (address[] identityAddresses, address[] providers, address[] resolvers);
+```
+
+### mintIdentity
+
+Mints an `Identity` with the passed `identity` and `provider`.
+
+```solidity
+function mintIdentity(string identity, address provider) public;
+```
+
+### mintIdentityDelegated
+
+Preforms the same logic as `mintIdentity`, but can be called by a `provider`. This function requires a signature for the `identityAddress` to confirm their consent.
+
+```solidity
+function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
+```
+
+### addProviders
+
+Adds an array of `providers` to the `Identity` of the `msg.sender`.
+
+```solidity
+function addProviders(address[] providers) public;
+```
+
+### removeProviders
+
+Removes an array of `providers` from the `Identity` of the `msg.sender`.
+
+```solidity
+function removeProviders(address[] providers) public;
+```
+
+### addResolvers
+
+Adds an array of `resolvers` to the passed `identity`. This must be called by a `provider`.
+
+```solidity
+function addResolvers(string identity, address[] resolvers) public;
+```
+
+### removeResolvers
+
+Removes an array of `resolvers` from the passed `identity`. This must be called by a `provider`.
+
+```solidity
+function removeResolvers(string identity, address[] resolvers) public;
+```
+
+### addAddress
+
+Adds the `addressToAdd` to the passed `identity`. Requires signatures from both the `addressToAdd` and the `approvingAddress`.
+
+```solidity
+function addAddress(string identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
+```
+
+### removeAddress
+
+Removes an `addressToRemove` from the passed `identity`. Requires a signature from the `addressToRemove`.
+
+```solidity
+function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+```
+
 ### Solidity Interface
 ```solidity
 pragma solidity ^0.4.24;

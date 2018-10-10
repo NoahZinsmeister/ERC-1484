@@ -3,8 +3,9 @@ const ethUtil = require('ethereumjs-util')
 const web3 = new Web3(Web3.givenProvider)
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
+const ProviderExample = artifacts.require('./examples/ProviderExample.sol')
 
-function sign (messageHash, publicKey, privateKey, method) {
+function sign (messageHash, address, privateKey, method) {
   return new Promise(resolve => {
     if (method === 'unprefixed') {
       let signature = ethUtil.ecsign(
@@ -16,7 +17,7 @@ function sign (messageHash, publicKey, privateKey, method) {
       signature.v = parseInt(ethUtil.bufferToHex(signature.v))
       resolve(signature)
     } else {
-      web3.eth.sign(messageHash, publicKey)
+      web3.eth.sign(messageHash, address)
         .then(concatenatedSignature => {
           let strippedSignature = ethUtil.stripHexPrefix(concatenatedSignature)
           let signature = {
@@ -42,22 +43,51 @@ const accountsPrivate = [
   '0x1711e5c516428d875c14dac234f36bbf3b4622aeac00566483a8087ed5a97297',
   '0xce5e2ea9c47caba88b3421d75023bd8c359e2aaf897e519a10a256d931028ca1'
 ]
-let registryInstance
-contract('Testing IdentityRegistry', function (accounts) {
-  it('Registry contract deployed', async function () {
-    registryInstance = await IdentityRegistry.new()
+const identifiers = [
+  '💧💧💧',
+  '💧💧💧💧',
+  '💧💧💧💧💧',
+  '💧💧💧💧💧💧',
+  '💧💧💧💧💧💧💧',
+  '💧💧💧💧💧💧💧💧',
+  '💧💧💧💧💧💧💧💧💧',
+  '💧💧💧💧💧💧💧💧💧💧',
+  '💧💧💧💧💧💧💧💧💧💧💧',
+  '💧💧💧💧💧💧💧💧💧💧💧💧'
+]
+const instances = {}
+
+contract('Testing Identity', function (accounts) {
+  const identities = accounts.map((_, i) => {
+    return {
+      address: accounts[i],
+      private: accountsPrivate[i],
+      identifiers: identifiers[i]
+    }
   })
 
-  it('Signatures verify', async function () {
-    let messageHash = web3.utils.soliditySha3('shh')
-    for (let i = 0; i < accounts.length; i++) {
-      for (const method in ['prefixed', 'unprefixed']) {
-        const signature = await sign(messageHash, accounts[i], accountsPrivate[i], method)
-        const isSigned = await registryInstance.isSigned.call(
-          accounts[i], messageHash, signature.v, signature.r, signature.s
-        )
-        assert.isTrue(isSigned, 'Signature could not be verified.')
+  describe('Deploying Contracts', function () {
+    it('IdentityRegistry contract deployed', async function () {
+      instances.IdentityRegistry = await IdentityRegistry.new()
+    })
+
+    it('Provider Example contract deployed', async function () {
+      instances.ProviderExample = await ProviderExample.new(instances.IdentityRegistry)
+    })
+  })
+
+  describe('Testing IdentityRegistry in isolation', function () {
+    it('Signatures verify correctly', async function () {
+      let messageHash = web3.utils.soliditySha3('shh')
+      for (const identity of identities) {
+        for (const method in ['prefixed', 'unprefixed']) {
+          const signature = await sign(messageHash, identity.address, identity.private, method)
+          const isSigned = await instances.IdentityRegistry.isSigned.call(
+            identity.address, messageHash, signature.v, signature.r, signature.s
+          )
+          assert.isTrue(isSigned, 'Signature could not be verified.')
+        }
       }
-    }
+    })
   })
 })

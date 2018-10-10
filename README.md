@@ -30,6 +30,8 @@ The proliferation of on-chain identity solutions can be traced back to the fact 
   - a signed message from the candidate address indicating intent to associate itself with the `Identity`
   - a signed message from an existing `Associated Address` of the `Identity` indicating the same.
 
+- `Recovery Address`: An Ethereum address with functionality to recover lost identities as outlined in the **Address Recovery** section
+
  `Identities` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`. Signatures are stored in the `Registry` to prevent replay attacks.
 
 - `Provider`: An Ethereum address (typically but not by definition a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf.
@@ -47,7 +49,7 @@ The Identity Registry contains functionality for a user to establish their core 
 We propose that `Identities` be denominated by a `string` for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all `Associated Addresses` commonly identifying an individual. Further, it creates a more complicated user experience in passing their ID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
 
 ### Address Management
-The address management function consists of trustlessly connecting multiple user-owned `Associated Addresses` to a user's `Identity`. It does not prescribe any special status to any given address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC 725 standard. This allows a user to access common identity data from multiple wallets while still
+The address management function consists of trustlessly connecting multiple user-owned `Associated Addresses` to a user's `Identity`. It does not prescribe any special status to any given identity-managing address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC 725 standard. This allows a user to access common identity data from multiple wallets while still
 - retaining flexibility to interact with contracts outside of their core identity pseudonymously
 - taking advantage of address-specific permissions established at the application layer of a user's identity.
 
@@ -76,7 +78,33 @@ The resolver standard is primarily what makes this ERC an identity protocol rath
 ### Provider Management
 While the protocol allows for users to directly call identity management functions, it also aims to be more robust and future-proof by allowing arbitrary smart contracts to perform identity management functions on a user's behalf. A provider set by an individual can perform address management and resolver management functions by passing the user's `coreID` in function calls.
 
-### Rationale
+### Recovery
+he specification introduces a `Recovery Address` to account for instances of lost user control over an `Associated Address`. Upon `Identity` creation, the public `Recovery Address` is passed as a parameter by a provider. Identity recovery functionality is triggered in three events.
+
+**Recovery**: Recovery occurs when a user recognizes that an `Associated Address` belonging to the user is lost or stolen. A user in this instance needs to call `initiateRecovery` from the `Recovery Address`. `initiateRecovery` removes all `Associated Addresses` and `Providers` from the corresponding `Identity` and replaces them with an address passed in the `initiateRecovery` function call. The `Identity` and associated `Resolvers` maintain integrity. The user is now responsible for adding the appropriate uncompromised addresses back to their `Identity` in the `Registry`.
+
+**Changing Recovery Key**: If a recovery key is lost, a provider can `initiateRecoveryAddressChange` with a signature from any claimed address. To prevent malicious change of a `Recovery Address` from someone who has gained control of an `Associated Address`, this occurs over a 14 day challenge period during which the `Recovery Address` may reject the change. If the `Recovery Address` does not reject the change within 14 days, the `Recovery Address` is changed. However, during the fourteen day period, the `Recovery Address` can dispute the change request by calling `triggerRecovery` in which case all `Associated Addresses` are removed, and an Address delegated in the `triggerRecovery` call becomes the only `Associated Address` for the `Identity`.
+
+**Trap Card**
+The Recovery scheme offers a lot of power to a `Recovery Address`; accordingly, `activateTrapCard` is a nuclear option to combat malicious control over an `Identity` when a `Recovery Address` is compromised. If a malicious actor compromises a user's `RecoveryAddress` and calls `triggerRecovery`, any address removed in the `Recovery` process can `activateTrapCard` to nuke the `Identity`. The user would then need to create a new `Identity` and would be responsible for engaging in recovery schemes for any Identity Applications built in the application layer.
+
+#### Alternative Recovery Considerations
+In devising the Recovery process outlined in this specification, we considered many Recovery options. We ultimately selected the scheme that was most unopinionated and modular to be consistent with the the `Resolver`, `Associated Address` and `Provider` components within the specification. Still, we feel it important to highlight some of the other recovery options considered to provide deeper rationale as to why we arrived at the above scheme.
+
+**High Level Concerns**
+Fundamentally, a Recovery scheme needed to be resilient to a compromised `Associated Address` taking control of a user's `Identity`. A secondary concern was preventing an `Associated Address` from maliciously destroying a user's identity due to off-chain utility, which is not an optimal scenario, but is strictly better than if they've gained control.  
+
+**Nuclear Option**
+This approach would allow any `Associated Address` to destroy an `Identity` whenever another `Associated Address` is compromised. While this may seem harsh, we held it in strong consideration due to the fact that ERC[TBD] is a protocol rather than an Identity *application*. Accordingly, once a user destroyed their compromised `Identity`, they would need to use whatever Restoration mechanisms were apparent in each of their actual identities. We ultimately dismissed this approach for two main reasons.
+- It would increase the frequency of recovery requests for applications of identity due to the multiple addresses any of which could be compromised.
+- It is not robust for instances in which a user has only one `Associated Address`
+
+**Unilateral Address Removal from a provider**: This would allow providers to remove an `Associated Address` without a signature from the `Associated Address`. To prevent a compromised address from setting a malicious provider to remove uncompromised addresses, this would require a waiting period between when a provider is set and when a provider is able to remove an `Associated Address`. This implementation would allow a provider to include arbitrarily sophisticated Recovery schemes - for instance, multi-sig requirements, centralized off-chain verification, user controlled master addresses, deferral to a jurisdictional contract, or more. We dismissed this approach because we felt it placed too high of a burden on `Providers`. If a `Provider` offered a sophisticated range of functionality to a user, but post-deployment a threat was found in the Recovery logic of the provider, provider-specific infrastructure would need to be rebuilt. We considered including a flag that allows a user to determine if a provider may or may not remove `Associated Addresses`; however, we ultimately concluded that breaking out removal of an `Associated Address` into a `Recovery Address` allows for equally sophisticated recovery logic while separating the functionality from providers and leaving less room for users to relinquish control to poorly implemented providers. 
+
+
+*Importantly, the recovery address can be a user-controlled wallet or another address such as a multisig wallet or a smart contract address. This allows for more sophisticated recovery structures that can be compliant with identity standards for recovery such as those laid out by DID*
+
+## Rationale
 We find that at a protocol layer, identity should contain no claim or attestation structure and should rather simply lay a trustless framework upon which arbitrarily sophisticated claim and attestation structures may lie in conjunction.
 
 The main criticism of an identity layer comes from restrictiveness; we aim to limit requirements to be modular and future-proof without providing any special functionality for any component within the core registry. It simply allows users the option to interact on the blockchain using an arbitrarily robust identity rather than just an address.

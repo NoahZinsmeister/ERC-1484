@@ -4,8 +4,11 @@ import "./AddressSet/AddressSet.sol";
 
 
 contract SignatureVerifier {
+    // define the Ethereum prefix for signing a message of length 32
+    bytes prefix = "\x19Ethereum Signed Message:\n32";
+
     // checks if the provided (v, r, s) signature of messageHash was created by the private key associated with _address
-    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s) public pure returns (bool) {
+    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         return _isSigned(_address, messageHash, v, r, s) || _isSignedPrefixed(_address, messageHash, v, r, s);
     }
 
@@ -18,11 +21,9 @@ contract SignatureVerifier {
 
     // checks prefixed signatures
     function _isSignedPrefixed(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s)
-        private pure returns (bool)
+        private view returns (bool)
     {
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedMessageHash = keccak256(abi.encodePacked(prefix, messageHash));
-        return ecrecover(prefixedMessageHash, v, r, s) == _address;
+        return _isSigned(_address, keccak256(abi.encodePacked(prefix, messageHash)), v, r, s);
     }
 }
 
@@ -31,7 +32,7 @@ contract IdentityRegistry is SignatureVerifier {
     // bind address library
     using AddressSet for AddressSet.Set;
 
-    // identity structure
+    // define identity data structure and mappings
     struct Identity {
         bool minted;
         address recoveryAddress;
@@ -39,18 +40,29 @@ contract IdentityRegistry is SignatureVerifier {
         AddressSet.Set providers;
         AddressSet.Set resolvers;
     }
-    mapping (string => Identity) internal identityDirectory;
-    mapping (address => string) internal associatedAddressDirectory;
+
+    mapping (string => Identity) private identityDirectory;
+    mapping (address => string) private associatedAddressDirectory;
 
     // signature log to prevent replay attacks
     mapping (bytes32 => bool) public signatureLog;
 
-    // removed address log to give recently removed addresses the ability to permanently disable identities
-    // struct AddressRemoval {
-    //     uint timestamp;
-    //     string fromIdentity;
-    // }
-    // mapping (address => AddressRemoval) internal removalLog;
+    // define data structures required for recovery and, in dire circumstances, poison pills
+    uint maxAssociatedAddresses = 20;
+    uint recoveryTimeout = 2 weeks;
+
+    struct RecoveryAddressChange {
+        uint timestamp;
+        address oldRecoveryAddress;
+    }
+    mapping (string => RecoveryAddressChange) private recoveryAddressChangeLogs;
+
+    struct RecoveredChange {
+        uint timestamp;
+        bytes32 hashedOldAssociatedAddresses;
+    }
+    mapping (string => RecoveredChange) private recoveredChangeLogs;
+
 
     // checks whether a given identity exists (does not throw)
     function identityExists(string identity) public view returns (bool) {
@@ -79,6 +91,12 @@ contract IdentityRegistry is SignatureVerifier {
         return associatedAddressDirectory[_address];
     }
 
+    // checks whether a given identity has an address (does not throw)
+    function isAddressFor(string identity, address _address) public view returns (bool) {
+        if (!identityExists(identity)) return false;
+        return identityDirectory[identity].associatedAddresses.contains(_address);
+    }
+
     // checks whether a given identity has a provider (does not throw)
     function isProviderFor(string identity, address provider) public view returns (bool) {
         if (!identityExists(identity)) return false;
@@ -97,12 +115,6 @@ contract IdentityRegistry is SignatureVerifier {
         return identityDirectory[identity].resolvers.contains(resolver);
     }
 
-    // checks whether a given identity has an address (does not throw)
-    function isAddressFor(string identity, address _address) public view returns (bool) {
-        if (!identityExists(identity)) return false;
-        return identityDirectory[identity].associatedAddresses.contains(_address);
-    }
-
     // functions to read identity values (throws if the passed identity does not exist)
     function getDetails(string identity) public view _identityExists(identity, true)
         returns (address recoveryAddress, address[] associatedAddresses, address[] providers, address[] resolvers)
@@ -116,102 +128,91 @@ contract IdentityRegistry is SignatureVerifier {
         );
     }
 
-    // mints a new identity for the msg.sender and sets the passed provider
-    function mintIdentity(string identity, address recoveryAddress, address provider) public {
-        mintIdentity(identity,recoveryAddress, msg.sender, provider, false);
+    // checks whether or not a passed timestamp is within/not within the timeout period
+    function isTimedOut(uint timestamp) private view returns (bool) {
+        // solium-disable-next-line security/no-block-members
+        return block.timestamp > timestamp + recoveryTimeout;
     }
 
-    // mints a new identity for the passed address with the msg.sender as the provider
+
+    // mints a new identity for the msg.sender
+    function mintIdentity(string identity, address recoveryAddress, address provider, address[] resolvers) public {
+        mintIdentity(identity, recoveryAddress, msg.sender, provider, resolvers, false);
+    }
+
+    // mints a new identity for the passed address (with the msg.sender as the implicit provider)
     function mintIdentityDelegated(
-        string identity, address recoveryAddress, address associatedAddress, uint8 v, bytes32 r, bytes32 s
+        string identity,
+        address recoveryAddress,
+        address associatedAddress,
+        address[] resolvers,
+        uint8 v, bytes32 r, bytes32 s
     )
         public
     {
         require(
             isSigned(
                 associatedAddress,
-                keccak256(abi.encodePacked("Mint Identity", address(this), identity, associatedAddress, msg.sender)),
+                keccak256(
+                    abi.encodePacked(
+                        "Mint", address(this), identity, recoveryAddress, associatedAddress, msg.sender, resolvers
+                    )
+                ),
                 v, r, s
             ),
             "Permission denied."
         );
-        mintIdentity(identity, recoveryAddress, associatedAddress, msg.sender, true);
+
+        mintIdentity(identity, recoveryAddress, associatedAddress, msg.sender, resolvers, true);
     }
 
     // common logic for all identity minting
     function mintIdentity(
-        string identity, address recoveryAddress, address associatedAddress, address provider, bool delegated
+        string identity,
+        address recoveryAddress,
+        address associatedAddress,
+        address provider,
+        address[] resolvers,
+        bool delegated
     )
         private _identityExists(identity, false) _hasIdentity(associatedAddress, false)
     {
         require(bytes(identity).length <= 32, "Username too long.");
-        require(bytes(identity).length >= 3,  "Username too short.");
+        require(bytes(identity).length >= 1,  "Username too short.");
 
+        // set identity variables
         Identity storage _identity = identityDirectory[identity];
-
         _identity.minted = true;
         _identity.recoveryAddress = recoveryAddress;
         _identity.associatedAddresses.insert(associatedAddress);
         _identity.providers.insert(provider);
-
-        associatedAddressDirectory[associatedAddress] = identity;
-
-        emit IdentityMinted(identity, recoveryAddress, associatedAddress, provider, delegated);
-    }
-
-    // allows addresses associated with an identity to add providers
-    function addProviders(address[] providers) public {
-        Identity storage _identity = identityDirectory[getIdentity(msg.sender)];
-        for (uint i; i < providers.length; i++) {
-            _identity.providers.insert(providers[i]);
-        }
-    }
-
-    // allows addresses associated with an identity to add providers
-    function removeProviders(address[] providers) public {
-        Identity storage _identity = identityDirectory[getIdentity(msg.sender)];
-        for (uint i; i < providers.length; i++) {
-            _identity.providers.remove(providers[i]);
-        }
-    }
-
-    // allow providers to add resolvers
-    function addResolvers(string identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
-        Identity storage _identity = identityDirectory[identity];
-
         for (uint i; i < resolvers.length; i++) {
             _identity.resolvers.insert(resolvers[i]);
-            emit ResolverAdded(identity, resolvers[i], msg.sender);
         }
-    }
 
-    // allow providers to remove resolvers
-    function removeResolvers(string identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
-        Identity storage _identity = identityDirectory[identity];
+        // set reverse lookup by address
+        associatedAddressDirectory[associatedAddress] = identity;
 
-        for (uint i; i < resolvers.length; i++) {
-            _identity.resolvers.remove(resolvers[i]);
-            emit ResolverRemoved(identity, resolvers[i], msg.sender);
-        }
+        emit IdentityMinted(identity, recoveryAddress, associatedAddress, provider, resolvers, delegated);
     }
 
     // allow providers to add addresses
     function addAddress(
         string identity,
-        address approvingAddress,
         address addressToAdd,
+        address approvingAddress,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt
     )
         public _isProviderFor(identity, msg.sender) _hasIdentity(addressToAdd, false)
     {
         Identity storage _identity = identityDirectory[identity];
-
         require(
             _identity.associatedAddresses.contains(approvingAddress),
             "The passed approvingAddress is not associated with the passed identity."
         );
+        require(_identity.associatedAddresses.length() <= maxAssociatedAddresses, "Cannot add >20 addresses.");
 
-        bytes32 messageHash = keccak256(abi.encodePacked("Claim Address", identity, addressToAdd, salt));
+        bytes32 messageHash = keccak256(abi.encodePacked("Add Address", identity, addressToAdd, salt));
         require(signatureLog[messageHash] == false, "Message hash has already been used.");
         require(isSigned(approvingAddress, messageHash, v[0], r[0], s[0]), "Permission denied from approving address.");
         require(isSigned(addressToAdd, messageHash, v[1], r[1], s[1]), "Permission denied from address to add.");
@@ -245,60 +246,131 @@ contract IdentityRegistry is SignatureVerifier {
         emit AddressRemoved(identity, addressToRemove, msg.sender);
     }
 
-    uint timeout = 2 weeks;
-
-    struct RecoveryAddressChangeLog {
-        uint timestamp;
-        address oldRecoveryAddress;
+    // allows addresses associated with an identity to add providers
+    function addProviders(address[] providers) public _hasIdentity(msg.sender, true) {
+        addProviders(getIdentity(msg.sender), providers, false);
     }
-    mapping (string => RecoveryAddressChangeLog) internal recoveryAddressChangeLogs;
 
-    function initiateRecoveryAddressChange(string identity, address newRecoveryAddress)
+    // allows providers to add other providers for addresses
+    function addProviders(
+        string identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
+    ) 
         public _isProviderFor(identity, msg.sender)
     {
         Identity storage _identity = identityDirectory[identity];
-        RecoveryAddressChangeLog storage log = recoveryAddressChangeLogs[identity];
 
-        // solium-disable-next-line security/no-block-members
-        require(block.timestamp > log.timestamp + timeout, "Must wait for pending Recovery Address Change.");
+        require(
+            _identity.associatedAddresses.contains(approvingAddress),
+            "The passed approvingAddress is not associated with the passed identity."
+        );
 
+        bytes32 messageHash = keccak256(abi.encodePacked("Add Provider", identity, providers, salt));
+        require(signatureLog[messageHash] == false, "Message hash has already been used.");
+        require(isSigned(approvingAddress, messageHash, v, r, s), "Permission denied.");
+        signatureLog[messageHash] = true;
+
+        addProviders(identity, providers, true);
+    }
+
+    function addProviders(string identity, address[] providers, bool delegated) private {
+        Identity storage _identity = identityDirectory[identity];
+        for (uint i; i < providers.length; i++) {
+            _identity.providers.insert(providers[i]);
+            emit ProviderAdded(identity, providers[i], delegated);
+        }
+    }
+
+    // allows addresses associated with an identity to remove providers
+    function removeProviders(address[] providers) public _hasIdentity(msg.sender, true) {
+        removeProviders(getIdentity(msg.sender), providers, false);
+    }
+
+    // allows providers to remove other providers for addresses
+    function removeProviders(
+        string identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
+    ) 
+        public _isProviderFor(identity, msg.sender)
+    {
+        Identity storage _identity = identityDirectory[identity];
+
+        require(
+            _identity.associatedAddresses.contains(approvingAddress),
+            "The passed approvingAddress is not associated with the passed identity."
+        );
+
+        bytes32 messageHash = keccak256(abi.encodePacked("Remove Provider", identity, providers, salt));
+        require(signatureLog[messageHash] == false, "Message hash has already been used.");
+        require(isSigned(approvingAddress, messageHash, v, r, s), "Permission denied.");
+        signatureLog[messageHash] = true;
+
+        removeProviders(identity, providers, true);
+    }
+
+    function removeProviders(string identity, address[] providers, bool delegated) private {
+        Identity storage _identity = identityDirectory[identity];
+        for (uint i; i < providers.length; i++) {
+            _identity.providers.remove(providers[i]);
+            emit ProviderRemoved(identity, providers[i], delegated);
+        }
+    }
+
+    // allow providers to add resolvers
+    function addResolvers(string identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
+        Identity storage _identity = identityDirectory[identity];
+        for (uint i; i < resolvers.length; i++) {
+            _identity.resolvers.insert(resolvers[i]);
+            emit ResolverAdded(identity, resolvers[i], msg.sender);
+        }
+    }
+
+    // allow providers to remove resolvers
+    function removeResolvers(string identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
+        Identity storage _identity = identityDirectory[identity];
+        for (uint i; i < resolvers.length; i++) {
+            _identity.resolvers.remove(resolvers[i]);
+            emit ResolverRemoved(identity, resolvers[i], msg.sender);
+        }
+    }
+
+
+    // initiate a change in recovery address
+    function initiateRecoveryAddressChange(string identity, address newRecoveryAddress)
+        public _isProviderFor(identity, msg.sender)
+    {
+        RecoveryAddressChange storage log = recoveryAddressChangeLogs[identity];
+        require(isTimedOut(log.timestamp), "Pending change of recovery address has not timed out.");
+
+        // log the old recovery address
+        Identity storage _identity = identityDirectory[identity];
         address oldRecoveryAddress = _identity.recoveryAddress;
         // solium-disable-next-line security/no-block-members
         log.timestamp = block.timestamp;
         log.oldRecoveryAddress = oldRecoveryAddress;
 
+        // make the change
         _identity.recoveryAddress = newRecoveryAddress;
 
         emit RecoveryAddressChangeInitiated(identity, oldRecoveryAddress, newRecoveryAddress);
     }
 
-    struct RecoveredChangeLog {
-        uint timestamp;
-        bytes32 hashedAssociatedAddresses;
-    }
-    mapping (string => RecoveredChangeLog) internal RecoveredChangeLogs;
-
+    // initiate recovery, only callable by the current recovery address, or the one changed within the past 2 weeks
     function triggerRecovery(string identity, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s)
         public  _identityExists(identity, true) _hasIdentity(newAssociatedAddress, false)
     {
+        RecoveredChange storage recoveredChange = recoveredChangeLogs[identity];
+        require(isTimedOut(recoveredChange.timestamp), "It's not been long enough since the last recovery.");
+
+        // ensure the sender is the recovery address/old recovery address if there's been a recent change
         Identity storage _identity = identityDirectory[identity];
-        RecoveryAddressChangeLog storage recoveryAddressChangeLog = recoveryAddressChangeLogs[identity];
-        RecoveredChangeLog storage recoveredChangeLog = RecoveredChangeLogs[identity];
-
-        // require that the identity hasn't been recovered within the last 2 weeks
-        // solium-disable-next-line security/no-block-members
-        require(block.timestamp > recoveredChangeLog.timestamp + timeout, "Must wait before recovering again.");
-
-        // if there has not been a change of recovery address in the past 2 weeks...
-        // solium-disable-next-line security/no-block-members
-        if (block.timestamp > recoveryAddressChangeLog.timestamp + timeout) {
+        RecoveryAddressChange storage recoveryAddressChange = recoveryAddressChangeLogs[identity];
+        if (isTimedOut(recoveryAddressChange.timestamp)) {
             require(
                 msg.sender == _identity.recoveryAddress,
                 "Only the current recovery address can initiate a recovery."
             );
         } else {
             require(
-                msg.sender == recoveryAddressChangeLog.oldRecoveryAddress,
+                msg.sender == recoveryAddressChange.oldRecoveryAddress,
                 "Only the recently removed recovery address can initiate a recovery."
             );
         }
@@ -309,68 +381,74 @@ contract IdentityRegistry is SignatureVerifier {
                 keccak256(abi.encodePacked("Recover", address(this), identity, newAssociatedAddress)),
                 v, r, s
             ),
-            "Permission denied from address."
+            "Permission denied."
         );
 
+        // log the old associated addresses to unlock the poison pill
         address[] memory oldAssociatedAddresses = _identity.associatedAddresses.members;
-        removeAllAssociatedAddressesAndProviders(_identity);
+        // solium-disable-next-line security/no-block-members
+        recoveredChange.timestamp = block.timestamp;
+        recoveredChange.hashedOldAssociatedAddresses = keccak256(abi.encodePacked(oldAssociatedAddresses));
 
+        // remove identity data, and add the new address as the sole provider
+        clearAllIdentityData(_identity, false);
         _identity.associatedAddresses.insert(newAssociatedAddress);
         associatedAddressDirectory[newAssociatedAddress] = identity;
-
-        // store the hash of all removed associated addresses to enable poison pill
-        // solium-disable-next-line security/no-block-members
-        recoveredChangeLog.timestamp = block.timestamp;
-        recoveredChangeLog.hashedAssociatedAddresses = keccak256(abi.encodePacked(oldAssociatedAddresses));
 
         emit RecoveryTriggered(identity, msg.sender, oldAssociatedAddresses, newAssociatedAddress);
     }
 
-    // allows recently removed addresses to permanently disable the identity they were removed from
-    function triggerPoisonPill(string identity, address[] chunk1, address[] chunk2, bool clearResolvers)
+    // allows addresses recently removed by recovery to permanently disable the identity they were removed from
+    function triggerPoisonPill(string identity, address[] firstChunk, address[] lastChunk, bool clearResolvers)
         public _identityExists(identity, true)
     {
-        RecoveredChangeLog storage log = RecoveredChangeLogs[identity];
-
-        // solium-disable-next-line security/no-block-members
-        require(block.timestamp <= log.timestamp + timeout, "Timeout has expired.");
+        RecoveredChange storage log = recoveredChangeLogs[identity];
+        require(!isTimedOut(log.timestamp), "No addresses have recently been removed from a recovery.");
         
+        // ensure that the msg.sender was an old associated address for the passed identity
         address[1] memory middleChunk = [msg.sender];
         require(
-            keccak256(abi.encodePacked(chunk1, middleChunk, chunk2)) == log.hashedAssociatedAddresses,
-            "Cannot poison pill from an address that was not recently removed via recover"
+            keccak256(abi.encodePacked(firstChunk, middleChunk, lastChunk)) == log.hashedOldAssociatedAddresses,
+            "Cannot activate the poison pill from an address that was not recently removed via recover."
         );
 
+        // poison the identity
         Identity storage _identity = identityDirectory[identity];
-
-        removeAllAssociatedAddressesAndProviders(_identity);
-        if (clearResolvers) delete _identity.resolvers;
+        clearAllIdentityData(_identity, clearResolvers);
 
         emit Poisoned(identity, msg.sender, clearResolvers);
     }
 
-    function removeAllAssociatedAddressesAndProviders(Identity storage identity) internal {
+    // removes all associated addresses, providers, and optionally resolvers from an identity
+    function clearAllIdentityData(Identity storage identity, bool clearResolvers) private {
         address[] storage associatedAddresses = identity.associatedAddresses.members;
         for (uint i; i < associatedAddresses.length; i++) {
             delete associatedAddressDirectory[associatedAddresses[i]];
         }
-
-        delete identity.associatedAddresses;        
-
+        delete identity.associatedAddresses;
         delete identity.providers;
+        if (clearResolvers) delete identity.providers;
     }
 
-    // events
+
+    // define events
+    event IdentityMinted(
+        string identity,
+        address recoveryAddress,
+        address associatedAddress,
+        address provider,
+        address[] resolvers,
+        bool delegated
+    );
+    event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
+    event AddressRemoved(string identity, address removedAddress, address provider);
+    event ProviderAdded(string identity, address provider, bool delegated);
+    event ProviderRemoved(string identity, address provider, bool delegated);
+    event ResolverAdded(string identity, address resolvers, address provider);
+    event ResolverRemoved(string identity, address resolvers, address provider);
     event RecoveryAddressChangeInitiated(string identity, address oldRecoveryAddress, address newRecoveryAddress);
     event RecoveryTriggered(
         string identity, address recoveryAddress, address[] oldAssociatedAddress, address newAssociatedAddress
     );
-    event Poisoned(string identity, address initiator, bool resolversCleared);
-    event IdentityMinted(
-        string identity, address recoveryAddress, address associatedAddress, address provider, bool delegated
-    );
-    event ResolverAdded(string identity, address resolvers, address provider);
-    event ResolverRemoved(string identity, address resolvers, address provider);
-    event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
-    event AddressRemoved(string identity, address removedAddress, address provider);
+    event Poisoned(string identity, address poisoner, bool resolversCleared);
 }

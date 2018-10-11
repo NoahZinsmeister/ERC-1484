@@ -1,16 +1,31 @@
 pragma solidity ^0.4.24;
 
 contract IdentityRegistry {
-    function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
-    function getIdentity(address _address) public view returns (string identity);
-    function addResolvers(string identity, address[] resolvers) public;
-    function removeResolvers(string identity, address[] resolvers) public;
+    function getIdentity(address _address) public view returns (uint identity);
+    function mintIdentityDelegated(
+        address recoveryAddress,
+        address associatedAddress,
+        address[] resolvers,
+        uint8 v, bytes32 r, bytes32 s) public returns (uint);
     function addAddress(
-        string identity,
-        address approvingAddress,
+        uint identity,
         address addressToAdd,
+        address approvingAddress,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
-    function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+    function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+    function addProviders(
+        uint identity,
+        address[] providers,
+        address approvingAddress,
+        uint8 v, bytes32 r, bytes32 s, uint salt) public;
+    function removeProviders(
+        uint identity,
+        address[] providers,
+        address approvingAddress,
+        uint8 v, bytes32 r, bytes32 s, uint salt) public;
+    function addResolvers(uint identity, address[] resolvers) public;
+    function removeResolvers(uint identity, address[] resolvers) public;
+    function initiateRecoveryAddressChange(uint identity, address newRecoveryAddress) public;
 }
 
 contract ProviderTesting {
@@ -20,12 +35,12 @@ contract ProviderTesting {
         registry = IdentityRegistry(identityRegistryAddress);
     }
 
-    function stringsEqual(string memory first, string memory second) public pure returns (bool) {
-        return keccak256(abi.encodePacked(first)) == keccak256(abi.encodePacked(second));
-    }
-
-    function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public {
-        registry.mintIdentityDelegated(identity, identityAddress, v, r, s);
+    function mintIdentityDelegated(
+        address recoveryAddress, address associatedAddress, address[] resolvers, uint8 v, bytes32 r, bytes32 s
+    )
+        public
+    {
+        registry.mintIdentityDelegated(recoveryAddress, associatedAddress, resolvers, v, r, s);
     }
 
 
@@ -33,24 +48,24 @@ contract ProviderTesting {
         registry.addResolvers(registry.getIdentity(msg.sender), resolvers);
     }
 
-    function removeResolvers(string identity, address[] resolvers) public {
+    function removeResolvers(uint identity, address[] resolvers) public {
         require(
-            stringsEqual(registry.getIdentity(msg.sender), identity),
+            registry.getIdentity(msg.sender) == identity,
             "This provider only allows resolvers to be removed from addresses associated with the identity in question"
         );
         registry.removeResolvers(identity, resolvers);
     }
 
     function addAddress(
-        string identity,
-        address approvingAddress,
+        uint identity,
         address addressToAdd,
+        address approvingAddress,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt
     ) public {
-        registry.addAddress(identity, approvingAddress, addressToAdd, v, r, s, salt);
+        registry.addAddress(identity, addressToAdd, approvingAddress, v, r, s, salt);
     }
 
-    function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public {
+    function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public {
         registry.removeAddress(identity, addressToRemove, v, r, s, salt);
     }
 }

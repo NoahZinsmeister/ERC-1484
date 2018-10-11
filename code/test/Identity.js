@@ -69,29 +69,19 @@ const accountsPrivate = [
   '0x6bf410ff825d07346c110c5836b33ec76e7d1ee051283937392180b732aa3aff',
   '0xccc3c84f02b038a5d60d93977ab11eb57005f368b5f62dad29486edeb4566954',
   '0xfdf12368f9e0735dc01da9db58b1387236120359024024a31e611e82c8853d7f',
-  '0x44e02845db8861094c519d72d08acb7435c37c57e64ec5860fb15c5f626cb77c',
-  '0x12093c3cd8e0c6ceb7b1b397724cd82c4d84f81263f56a44f11d8bd3a61ffccb',
-  '0xf65450adda73b32e056ed24246d8d370e49fc88b427f96f37bbf23f6b132b93b',
-  '0x34a1f9ed996709f629d712d5b267d23f37be82bf8003a023264f71005f6486e6',
-  '0x1711e5c516428d875c14dac234f36bbf3b4622aeac00566483a8087ed5a97297',
-  '0xce5e2ea9c47caba88b3421d75023bd8c359e2aaf897e519a10a256d931028ca1'
+  '0x44e02845db8861094c519d72d08acb7435c37c57e64ec5860fb15c5f626cb77c'
 ]
 const identifiers = [
   '💧💧💧',
   '💧💧💧💧',
   '💧💧💧💧💧',
   '💧💧💧💧💧💧',
-  '💧💧💧💧💧💧💧',
-  '💧💧💧💧💧💧💧💧',
-  '💧💧💧💧💧💧💧💧💧',
-  '💧💧💧💧💧💧💧💧💧💧',
-  '💧💧💧💧💧💧💧💧💧💧💧',
-  '💧💧💧💧💧💧💧💧💧💧💧💧'
+  '💧💧💧💧💧💧💧'
 ]
 const instances = {}
 
 contract('Testing Identity', function (accounts) {
-  const identities = accounts.map((_, i) => {
+  const identities = accounts.slice(0, 5).map((_, i) => {
     return {
       address:  accounts[i],
       private:  accountsPrivate[i],
@@ -108,8 +98,12 @@ contract('Testing Identity', function (accounts) {
       instances.ProviderTesting = await ProviderTesting.new(instances.IdentityRegistry.address)
     })
 
-    it('Resolver Testing contract deployed', async function () {
-      instances.ResolverTesting = await ResolverTesting.new(instances.IdentityRegistry.address)
+    const numberOfResolvers = 5
+    it('Resolver Testing contracts deployed', async function () {
+      instances.ResolverTesting = []
+      for (let i = 0; i < numberOfResolvers; i++) {
+        instances.ResolverTesting.push(await ResolverTesting.new(instances.IdentityRegistry.address))
+      }
     })
   })
 

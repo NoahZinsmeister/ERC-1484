@@ -5,7 +5,7 @@ import "./AddressSet/AddressSet.sol";
 
 contract SignatureVerifier {
     // define the Ethereum prefix for signing a message of length 32
-    bytes prefix = "\x19Ethereum Signed Message:\n32";
+    bytes private prefix = "\x19Ethereum Signed Message:\n32";
 
     // checks if the provided (v, r, s) signature of messageHash was created by the private key associated with _address
     function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
@@ -41,36 +41,37 @@ contract IdentityRegistry is SignatureVerifier {
         AddressSet.Set resolvers;
     }
 
-    mapping (string => Identity) private identityDirectory;
-    mapping (address => string) private associatedAddressDirectory;
+    uint public nextIdentity = 1;
+    mapping (uint => Identity) private identityDirectory;
+    mapping (address => uint) private associatedAddressDirectory;
 
     // signature log to prevent replay attacks
     mapping (bytes32 => bool) public signatureLog;
 
     // define data structures required for recovery and, in dire circumstances, poison pills
-    uint maxAssociatedAddresses = 20;
-    uint recoveryTimeout = 2 weeks;
+    uint public maxAssociatedAddresses = 20;
+    uint public recoveryTimeout = 2 weeks;
 
     struct RecoveryAddressChange {
         uint timestamp;
         address oldRecoveryAddress;
     }
-    mapping (string => RecoveryAddressChange) private recoveryAddressChangeLogs;
+    mapping (uint => RecoveryAddressChange) private recoveryAddressChangeLogs;
 
     struct RecoveredChange {
         uint timestamp;
         bytes32 hashedOldAssociatedAddresses;
     }
-    mapping (string => RecoveredChange) private recoveredChangeLogs;
+    mapping (uint => RecoveredChange) private recoveredChangeLogs;
 
 
     // checks whether a given identity exists (does not throw)
-    function identityExists(string identity) public view returns (bool) {
+    function identityExists(uint identity) public view returns (bool) {
         return identityDirectory[identity].minted;
     }
 
     // checks whether a given identity exists (does not throw)
-    modifier _identityExists(string identity, bool check) {
+    modifier _identityExists(uint identity, bool check) {
         require(identityExists(identity) == check, "The passed identity does/does not exist.");
         _;
     }
@@ -87,36 +88,36 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // gets the identity of an address (throws if the address doesn't have an identity)
-    function getIdentity(address _address) public view _hasIdentity(_address, true) returns (string identity) {
+    function getIdentity(address _address) public view _hasIdentity(_address, true) returns (uint identity) {
         return associatedAddressDirectory[_address];
     }
 
     // checks whether a given identity has an address (does not throw)
-    function isAddressFor(string identity, address _address) public view returns (bool) {
+    function isAddressFor(uint identity, address _address) public view returns (bool) {
         if (!identityExists(identity)) return false;
         return identityDirectory[identity].associatedAddresses.contains(_address);
     }
 
     // checks whether a given identity has a provider (does not throw)
-    function isProviderFor(string identity, address provider) public view returns (bool) {
+    function isProviderFor(uint identity, address provider) public view returns (bool) {
         if (!identityExists(identity)) return false;
         return identityDirectory[identity].providers.contains(provider);
     }
 
     // enforces that an identity has a provider
-    modifier _isProviderFor(string identity, address provider) {
+    modifier _isProviderFor(uint identity, address provider) {
         require(isProviderFor(identity, provider), "The passed identity has/has not set the passed provider.");
         _;
     }
 
     // checks whether a given identity has a resolver (does not throw)
-    function isResolverFor(string identity, address resolver) public view returns (bool) {
+    function isResolverFor(uint identity, address resolver) public view returns (bool) {
         if (!identityExists(identity)) return false;
         return identityDirectory[identity].resolvers.contains(resolver);
     }
 
     // functions to read identity values (throws if the passed identity does not exist)
-    function getDetails(string identity) public view _identityExists(identity, true)
+    function getDetails(uint identity) public view _identityExists(identity, true)
         returns (address recoveryAddress, address[] associatedAddresses, address[] providers, address[] resolvers)
     {
         Identity storage _identity = identityDirectory[identity];
@@ -136,19 +137,16 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // mints a new identity for the msg.sender
-    function mintIdentity(string identity, address recoveryAddress, address provider, address[] resolvers) public {
-        mintIdentity(identity, recoveryAddress, msg.sender, provider, resolvers, false);
+    function mintIdentity(address recoveryAddress, address provider, address[] resolvers) public returns (uint identity)
+    {
+        return mintIdentity(recoveryAddress, msg.sender, provider, resolvers, false);
     }
 
     // mints a new identity for the passed address (with the msg.sender as the implicit provider)
     function mintIdentityDelegated(
-        string identity,
-        address recoveryAddress,
-        address associatedAddress,
-        address[] resolvers,
-        uint8 v, bytes32 r, bytes32 s
+        address recoveryAddress, address associatedAddress, address[] resolvers, uint8 v, bytes32 r, bytes32 s
     )
-        public
+        public returns (uint identity)
     {
         require(
             isSigned(
@@ -163,22 +161,20 @@ contract IdentityRegistry is SignatureVerifier {
             "Permission denied."
         );
 
-        mintIdentity(identity, recoveryAddress, associatedAddress, msg.sender, resolvers, true);
+        return mintIdentity(recoveryAddress, associatedAddress, msg.sender, resolvers, true);
     }
 
     // common logic for all identity minting
     function mintIdentity(
-        string identity,
         address recoveryAddress,
         address associatedAddress,
         address provider,
         address[] resolvers,
         bool delegated
     )
-        private _identityExists(identity, false) _hasIdentity(associatedAddress, false)
+        private _identityExists(identity, false) _hasIdentity(associatedAddress, false) returns (uint)
     {
-        require(bytes(identity).length <= 32, "Username too long.");
-        require(bytes(identity).length >= 1,  "Username too short.");
+        uint identity = nextIdentity++;
 
         // set identity variables
         Identity storage _identity = identityDirectory[identity];
@@ -190,15 +186,17 @@ contract IdentityRegistry is SignatureVerifier {
             _identity.resolvers.insert(resolvers[i]);
         }
 
-        // set reverse lookup by address
+        // set reverse address lookup
         associatedAddressDirectory[associatedAddress] = identity;
 
         emit IdentityMinted(identity, recoveryAddress, associatedAddress, provider, resolvers, delegated);
+
+        return identity;
     }
 
     // allow providers to add addresses
     function addAddress(
-        string identity,
+        uint identity,
         address addressToAdd,
         address approvingAddress,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt
@@ -225,7 +223,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allow providers to remove addresses
-    function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt)
+    function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt)
         public _isProviderFor(identity, msg.sender)
     {
         Identity storage _identity = identityDirectory[identity];
@@ -253,8 +251,8 @@ contract IdentityRegistry is SignatureVerifier {
 
     // allows providers to add other providers for addresses
     function addProviders(
-        string identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
-    ) 
+        uint identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
+    )
         public _isProviderFor(identity, msg.sender)
     {
         Identity storage _identity = identityDirectory[identity];
@@ -272,7 +270,7 @@ contract IdentityRegistry is SignatureVerifier {
         addProviders(identity, providers, true);
     }
 
-    function addProviders(string identity, address[] providers, bool delegated) private {
+    function addProviders(uint identity, address[] providers, bool delegated) private {
         Identity storage _identity = identityDirectory[identity];
         for (uint i; i < providers.length; i++) {
             _identity.providers.insert(providers[i]);
@@ -287,8 +285,8 @@ contract IdentityRegistry is SignatureVerifier {
 
     // allows providers to remove other providers for addresses
     function removeProviders(
-        string identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
-    ) 
+        uint identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
+    )
         public _isProviderFor(identity, msg.sender)
     {
         Identity storage _identity = identityDirectory[identity];
@@ -306,7 +304,7 @@ contract IdentityRegistry is SignatureVerifier {
         removeProviders(identity, providers, true);
     }
 
-    function removeProviders(string identity, address[] providers, bool delegated) private {
+    function removeProviders(uint identity, address[] providers, bool delegated) private {
         Identity storage _identity = identityDirectory[identity];
         for (uint i; i < providers.length; i++) {
             _identity.providers.remove(providers[i]);
@@ -315,7 +313,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allow providers to add resolvers
-    function addResolvers(string identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
+    function addResolvers(uint identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
         Identity storage _identity = identityDirectory[identity];
         for (uint i; i < resolvers.length; i++) {
             _identity.resolvers.insert(resolvers[i]);
@@ -324,7 +322,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allow providers to remove resolvers
-    function removeResolvers(string identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
+    function removeResolvers(uint identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
         Identity storage _identity = identityDirectory[identity];
         for (uint i; i < resolvers.length; i++) {
             _identity.resolvers.remove(resolvers[i]);
@@ -334,7 +332,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // initiate a change in recovery address
-    function initiateRecoveryAddressChange(string identity, address newRecoveryAddress)
+    function initiateRecoveryAddressChange(uint identity, address newRecoveryAddress)
         public _isProviderFor(identity, msg.sender)
     {
         RecoveryAddressChange storage log = recoveryAddressChangeLogs[identity];
@@ -354,7 +352,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // initiate recovery, only callable by the current recovery address, or the one changed within the past 2 weeks
-    function triggerRecovery(string identity, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s)
+    function triggerRecovery(uint identity, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s)
         public  _identityExists(identity, true) _hasIdentity(newAssociatedAddress, false)
     {
         RecoveredChange storage recoveredChange = recoveredChangeLogs[identity];
@@ -399,7 +397,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allows addresses recently removed by recovery to permanently disable the identity they were removed from
-    function triggerPoisonPill(string identity, address[] firstChunk, address[] lastChunk, bool clearResolvers)
+    function triggerPoisonPill(uint identity, address[] firstChunk, address[] lastChunk, bool clearResolvers)
         public _identityExists(identity, true)
     {
         RecoveredChange storage log = recoveredChangeLogs[identity];
@@ -433,22 +431,22 @@ contract IdentityRegistry is SignatureVerifier {
 
     // define events
     event IdentityMinted(
-        string identity,
+        uint indexed identity,
         address recoveryAddress,
         address associatedAddress,
         address provider,
         address[] resolvers,
         bool delegated
     );
-    event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
-    event AddressRemoved(string identity, address removedAddress, address provider);
-    event ProviderAdded(string identity, address provider, bool delegated);
-    event ProviderRemoved(string identity, address provider, bool delegated);
-    event ResolverAdded(string identity, address resolvers, address provider);
-    event ResolverRemoved(string identity, address resolvers, address provider);
-    event RecoveryAddressChangeInitiated(string identity, address oldRecoveryAddress, address newRecoveryAddress);
+    event AddressAdded(uint indexed identity, address addedAddress, address approvingAddress, address provider);
+    event AddressRemoved(uint indexed identity, address removedAddress, address provider);
+    event ProviderAdded(uint indexed identity, address provider, bool delegated);
+    event ProviderRemoved(uint indexed identity, address provider, bool delegated);
+    event ResolverAdded(uint indexed identity, address resolvers, address provider);
+    event ResolverRemoved(uint indexed identity, address resolvers, address provider);
+    event RecoveryAddressChangeInitiated(uint indexed identity, address oldRecoveryAddress, address newRecoveryAddress);
     event RecoveryTriggered(
-        string identity, address recoveryAddress, address[] oldAssociatedAddress, address newAssociatedAddress
+        uint indexed identity, address recoveryAddress, address[] oldAssociatedAddress, address newAssociatedAddress
     );
-    event Poisoned(string identity, address poisoner, bool resolversCleared);
+    event Poisoned(uint indexed identity, address poisoner, bool resolversCleared);
 }

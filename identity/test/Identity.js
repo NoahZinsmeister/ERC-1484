@@ -4,6 +4,7 @@ const web3 = new Web3(Web3.givenProvider)
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
 const ProviderExample = artifacts.require('./examples/ProviderExample.sol')
+const ResolverExample = artifacts.require('./examples/ResolverExample.sol')
 
 function sign (messageHash, address, privateKey, method) {
   return new Promise(resolve => {
@@ -29,6 +30,38 @@ function sign (messageHash, address, privateKey, method) {
         })
     }
   })
+}
+
+async function verifyIdentity (identity, expectedDetails) {
+  const identityExists = await instances.IdentityRegistry.identityExists(identity)
+  assert.isTrue(identityExists, "identity unexpectedly does/doesn't exist.")
+
+  for (const address of expectedDetails.associatedAddresses) {
+    const hasIdentity = await instances.IdentityRegistry.hasIdentity(address)
+    assert.isTrue(hasIdentity, "address unexpectedly does/doesn't have an identity.")
+
+    const onChainIdentity = await instances.IdentityRegistry.getIdentity(address)
+    assert.equal(onChainIdentity, identity, 'on chain identity was set incorrectly.')
+
+    const isAddressFor = await instances.IdentityRegistry.isAddressFor(identity, address)
+    assert.isTrue(isAddressFor, 'associated address was set incorrectly.')
+  }
+
+  for (const provider of expectedDetails.providers) {
+    const isProviderFor = await instances.IdentityRegistry.isProviderFor(identity, provider)
+    assert.isTrue(isProviderFor, 'provider was set incorrectly.')
+  }
+
+  for (const resolver of expectedDetails.resolvers) {
+    const isResolverFor = await instances.IdentityRegistry.isResolverFor(identity, resolver)
+    assert.isTrue(isResolverFor, 'associated resolver was set incorrectly.')
+  }
+
+  const details = await instances.IdentityRegistry.getDetails(identity)
+  assert.equal(details.recoveryAddress, expectedDetails.recoveryAddress, 'unexpected recovery address.')
+  assert.deepEqual(details.associatedAddresses, expectedDetails.associatedAddresses, 'unexpected associated addresses.')
+  assert.deepEqual(details.providers, expectedDetails.providers, 'unexpected providers.')
+  assert.deepEqual(details.resolvers, expectedDetails.resolvers, 'unexpected resolvers.')
 }
 
 const accountsPrivate = [
@@ -60,9 +93,9 @@ const instances = {}
 contract('Testing Identity', function (accounts) {
   const identities = accounts.map((_, i) => {
     return {
-      address: accounts[i],
-      private: accountsPrivate[i],
-      identifiers: identifiers[i]
+      address:  accounts[i],
+      private:  accountsPrivate[i],
+      identity: identifiers[i]
     }
   })
 
@@ -72,7 +105,11 @@ contract('Testing Identity', function (accounts) {
     })
 
     it('Provider Example contract deployed', async function () {
-      instances.ProviderExample = await ProviderExample.new(instances.IdentityRegistry)
+      instances.ProviderExample = await ProviderExample.new(instances.IdentityRegistry.address)
+    })
+
+    it('Resolver Example contract deployed', async function () {
+      instances.ResolverExample = await ResolverExample.new(instances.IdentityRegistry.address)
     })
   })
 
@@ -80,14 +117,53 @@ contract('Testing Identity', function (accounts) {
     it('Signatures verify correctly', async function () {
       let messageHash = web3.utils.soliditySha3('shh')
       for (const identity of identities) {
-        for (const method in ['prefixed', 'unprefixed']) {
+        for (const method of ['prefixed', 'unprefixed']) {
           const signature = await sign(messageHash, identity.address, identity.private, method)
-          const isSigned = await instances.IdentityRegistry.isSigned.call(
+          const isSigned = await instances.IdentityRegistry.isSigned(
             identity.address, messageHash, signature.v, signature.r, signature.s
           )
           assert.isTrue(isSigned, 'Signature could not be verified.')
         }
       }
+    })
+
+    it('User can mint an Identity with themselves as a provider', async function () {
+      const identity = identities[0]
+
+      await instances.IdentityRegistry.mintIdentity(
+        identity.identity, identity.address, identity.address, { from: identity.address }
+      )
+
+      await verifyIdentity(identity.identity, {
+        recoveryAddress:     identity.address,
+        associatedAddresses: [identity.address],
+        providers:           [identity.address],
+        resolvers:           []
+      })
+
+      const isAddressFor = await instances.IdentityRegistry.isAddressFor(identity.identity, identity.address)
+      assert.isTrue(isAddressFor, 'a')
+
+      const isProviderFor = await instances.IdentityRegistry.isProviderFor(identity.identity, identity.address)
+      assert.isTrue(isProviderFor, 'b')
+    })
+
+    it('Triggering poison pull on an identity works as expected ', async function () {
+      const identity = identities[0]
+
+      await instances.IdentityRegistry.triggerPoisonPill(identity.identity, false)
+      await verifyIdentity(identity.identity, {
+        recoveryAddress: identity.address,
+        associatedAddresses: [],
+        providers: [],
+        resolvers: []
+      })
+
+      const isAddressFor = await instances.IdentityRegistry.isAddressFor(identity.identity, identity.address)
+      assert.isFalse(isAddressFor, 'c')
+
+      const isProviderFor = await instances.IdentityRegistry.isProviderFor(identity.identity, identity.address)
+      assert.isFalse(isProviderFor, 'd')
     })
   })
 })

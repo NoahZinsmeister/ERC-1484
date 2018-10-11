@@ -26,7 +26,11 @@ library AddressSet {
     }
 
     function contains(Set storage self, address other) public view returns (bool) {
-        return self.memberIndices[other] > 0;
+        return ( // solium-disable-line operator-whitespace
+            self.memberIndices[other] > 0 && 
+            self.members.length >= self.memberIndices[other] && 
+            self.members[self.memberIndices[other] - 1] == other
+        );
     }
 
     function length(Set storage self) public view returns (uint) {

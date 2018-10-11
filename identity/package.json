@@ -2,8 +2,12 @@
   "name": "identity-erc",
   "version": "1.0.0",
   "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hydrogen-dev/identity-erc.git"
+  },
   "scripts": {
-    "test": "npx truffle test --network development",
+    "test": "npx truffle test test/* --network development",
     "build": "npm run buidl",
     "buidl": "rm -rf build/ && npx truffle compile",
     "chain": "npx ganache-cli --port 8545 --seed hydro"
@@ -12,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ajv": "^6.5.4",
     "ethereumjs-util": "^5.2.0",
     "ganache-cli": "^6.1.8",
     "truffle": "^5.0.0-beta.1",

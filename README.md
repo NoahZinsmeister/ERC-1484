@@ -133,10 +133,10 @@ function isAddressFor(string identity, address _address) public view returns (bo
 
 #### getDetails
 
-Returns three `address` arrays of `identityAddresses`, `providers` and `resolvers`. All of these arrays represent the addresses associated with the passed `identity`.
+Returns three `address` arrays of `associatedAddresses`, `providers` and `resolvers`. All of these arrays represent the addresses associated with the passed `identity`.
 
 ```solidity
-function getDetails(string identity) public view returns (address[] identityAddresses, address[] providers, address[] resolvers);
+function getDetails(string identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
 ```
 
 #### mintIdentity
@@ -149,10 +149,10 @@ function mintIdentity(string identity, address provider) public;
 
 #### mintIdentityDelegated
 
-Preforms the same logic as `mintIdentity`, but can be called by a `provider`. This function requires a signature for the `identityAddress` to confirm their consent.
+Preforms the same logic as `mintIdentity`, but can be called by a `provider`. This function requires a signature for the `associatedAddress` to confirm their consent.
 
 ```solidity
-function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
+function mintIdentityDelegated(string identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
 ```
 
 #### addProviders
@@ -209,14 +209,14 @@ pragma solidity ^0.4.24;
 
 contract ERCTBD {
 
-  event IdentityMinted(string identity, address identityAddress, address provider, bool delegated);
+  event IdentityMinted(string identity, address associatedAddress, address provider, bool delegated);
   event ResolverAdded(string identity, address resolvers, address provider);
   event ResolverRemoved(string identity, address resolvers, address provider);
   event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
   event AddressRemoved(string identity, address removedAddress, address provider);
 
   struct Identity {
-    AddressSet.Set identityAddresses;
+    AddressSet.Set associatedAddresses;
     AddressSet.Set providers;
     AddressSet.Set resolvers;
   }
@@ -230,10 +230,10 @@ contract ERCTBD {
   function isResolverFor(string identity, address resolver) public view returns (bool);
   function isAddressFor(string identity, address _address) public view returns (bool);
 
-  function getDetails(string identity) public view returns (address[] identityAddresses, address[] providers, address[] resolvers);
+  function getDetails(string identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
 
   function mintIdentity(string identity, address provider) public;
-  function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
+  function mintIdentityDelegated(string identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
 
   function addProviders(address[] providers) public;
   function removeProviders(address[] providers) public;

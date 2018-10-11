@@ -32,6 +32,8 @@ The proliferation of on-chain identity solutions can be traced back to the fact 
 
 - `Recovery Address`: An Ethereum address with functionality to recover lost identities as outlined in the **Address Recovery** section
 
+- `Poison Pill`: In the event of irrecoverable control of your `Identity` we have implemented the ability to "nuke" your the `Identity`. When this happens, all `associated addresses`, `resolvers` and `providers` will be removed and the `Identity` will be unusable.
+
  `Identities` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`. Signatures are stored in the `Registry` to prevent replay attacks.
 
 - `Provider`: An Ethereum address (typically but not by definition a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf.

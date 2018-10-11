@@ -21,7 +21,7 @@ contract Ownable {
         _owner = msg.sender;
         emit OwnershipTransferred(address(0), _owner);
     }
-    
+
     /**
     * @return the address of the owner.
     */

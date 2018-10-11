@@ -30,13 +30,9 @@ contract ProviderExample is Provider {
     }
 
 
-    function addResolvers(string identity, address[] resolvers) public {
+    function addResolvers(address[] resolvers) public {
         IdentityRegistry registry = IdentityRegistry(identityRegistryAddress);
-        require(
-            stringsEqual(registry.getIdentity(msg.sender), identity),
-            "This provider only allows resolvers to be added from addresses associated with the identity in question"
-        );
-        registry.addResolvers(identity, resolvers);
+        registry.addResolvers(registry.getIdentity(msg.sender), resolvers);
     }
 
     function removeResolvers(string identity, address[] resolvers) public {

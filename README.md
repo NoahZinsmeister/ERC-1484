@@ -21,7 +21,7 @@ Emerging identity standards and related frameworks proposed by the Ethereum comm
 The proliferation of on-chain identity solutions can be traced back to the fact that each has codified their notion of identity and linked it to specific aspects of Ethereum (smart contracts, signature verification, etc.). This proposal eschews that approach, instead introducing a protocol layer in between the Ethereum network and identity applications. This solves identity management and interoperability challenges by enabling any identity-driven application to leverage an un-opinionated identity management protocol.
 
 ## Definitions
-- `Registry`: A single smart contract which is the hub for all user `Identities`. The `Registry's` primary responsibility is enforcing a global namespace for identities, which are individually denominated by a unique `string` between 3 and 32 bytes long.
+- `Registry`: A single smart contract which is the hub for all user `Identities`. The `Registry's` primary responsibility is enforcing a global namespace for identities, which are individually denominated by a unique `uint`.
 
 - `Identity`: The core data structure that constitutes a user's identity. Identities consist of 3 sets of addresses: `Associated Addresses`, `Providers`, and `Resolvers`.
 
@@ -48,20 +48,20 @@ The protocol revolves around claiming an Identity, setting a `Provider` and mana
 ### Identity Registry
 The Identity Registry contains functionality for a user to establish their core identity and manage their `Providers`, `Associated Addresses`, and `Resolvers`. It is important to note that this registry fundamentally requires transactions for every aspect of building out a user's identity through both resolvers and addresses. Nonetheless, we recognize the importance of global accessibility to dApps and identity applications. Accordingly, we include the option for a delegated identity-building scheme that allows smart contracts called `Providers` to build out a user's identity through signatures without requiring users to pay gas costs.
 
-We propose that `Identities` be denominated by a `string` for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to their owner address despite all `Associated Addresses` commonly identifying an individual. Further, it creates a more complicated user experience in passing their ID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
+We propose that `Identities` be denominated by a `uint` for user-friendliness instead of identifying individuals by an address. Identifying users by an address awkwardly provides added meaning to a specific address despite all `Associated Addresses` commonly identifying an individual. Further, it creates a more complicated user experience in passing their ID to a resolver or third-party. Currently, the only practical way for a user to identify themselves is to copy-and-paste their Ethereum address or to share a QR code. While QR codes are helpful, we do not feel that they should be the sole notion of user-friendliness by which a user may identify themselves.
 
 ### Address Management
 The address management function consists of trustlessly connecting multiple user-owned `Associated Addresses` to a user's `Identity`. It does not prescribe any special status to any given identity-managing address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC 725 standard. This allows a user to access common identity data from multiple wallets while still
 - retaining flexibility to interact with contracts outside of their core identity pseudonymously
 - taking advantage of address-specific permissions established at the application layer of a user's identity.
 
-Trustlessness in the address management function is achieved through a signature and verification scheme that requires two transactions - one from an address already within the registry and one from the address to be claimed. This logic is implemented in . Importantly, the transaction need not come from the original user, which allows entities, governments, etc to bear the overhead of creating a core identity.
+Trustlessness in the address management function is achieved through a signature and verification scheme that requires two signatures - one from an address already within the registry and one from the address to be claimed. Importantly, the transaction need not come from the original user, which allows entities, governments, etc to bear the overhead of creating a core identity. To prevent a compromised `Associated Address` from unilaterally removing other `Associated Addresses`, removal of an `Associated Address` also requires a signature from the address to be removed.
 
 `initiateClaim`: `hash(addressToClaim, secret, coreID)`
 
 `delegatedInitiateClaim`: `hash(signature, addressToClaim, secret, coreID)`
 
-`finalizeClaim`: transact with `secret` and `coreID`
+`finalizeClaim`: transact with `secret` and `Identity`
 
 `removeAddress`: transact from a claimed address with `addressToRemove`
 
@@ -75,20 +75,20 @@ The resolver management function is similarly low-level. It considers a resolver
 
 `removeResolver`: transact with `resolverAddress`
 
-The resolver standard is primarily what makes this ERC an identity protocol rather than an identity application. Resolvers resolve data about an atomic entity, the coreID, in the form of arbitrarily complex smart contracts rather than a pre-defined attestation structure.
+The resolver standard is primarily what makes this ERC an identity protocol rather than an identity application. `Resolvers` resolve data about an atomic entity, the `Identity`, in the form of arbitrarily complex smart contracts rather than a pre-defined attestation structure.
 
 ### Provider Management
-While the protocol allows for users to directly call identity management functions, it also aims to be more robust and future-proof by allowing arbitrary smart contracts to perform identity management functions on a user's behalf. A provider set by an individual can perform address management and resolver management functions by passing the user's `coreID` in function calls.
+While the protocol allows for users to directly call identity management functions, it also aims to be more robust and future-proof by allowing arbitrary smart contracts to perform identity management functions on a user's behalf. A provider set by an individual can perform address management and resolver management functions by passing the user's `Identity` in function calls.
 
 ### Recovery
-he specification introduces a `Recovery Address` to account for instances of lost user control over an `Associated Address`. Upon `Identity` creation, the public `Recovery Address` is passed as a parameter by a provider. Identity recovery functionality is triggered in three events.
+The specification introduces a `Recovery Address` to account for instances of lost user control over an `Associated Address`. Upon `Identity` creation, the public `Recovery Address` is passed as a parameter by a provider. Identity recovery functionality is triggered in three scenarios.
 
 **Recovery**: Recovery occurs when a user recognizes that an `Associated Address` belonging to the user is lost or stolen. A user in this instance needs to call `initiateRecovery` from the `Recovery Address`. `initiateRecovery` removes all `Associated Addresses` and `Providers` from the corresponding `Identity` and replaces them with an address passed in the `initiateRecovery` function call. The `Identity` and associated `Resolvers` maintain integrity. The user is now responsible for adding the appropriate uncompromised addresses back to their `Identity` in the `Registry`.
 
 **Changing Recovery Key**: If a recovery key is lost, a provider can `initiateRecoveryAddressChange` with a signature from any claimed address. To prevent malicious change of a `Recovery Address` from someone who has gained control of an `Associated Address`, this occurs over a 14 day challenge period during which the `Recovery Address` may reject the change. If the `Recovery Address` does not reject the change within 14 days, the `Recovery Address` is changed. However, during the fourteen day period, the `Recovery Address` can dispute the change request by calling `triggerRecovery` in which case all `Associated Addresses` are removed, and an Address delegated in the `triggerRecovery` call becomes the only `Associated Address` for the `Identity`.
 
 **Poison Pill**
-The Recovery scheme offers a lot of power to a `Recovery Address`; accordingly, `triggerPoisonPill` is a nuclear option to combat malicious control over an `Identity` when a `Recovery Address` is compromised. If a malicious actor compromises a user's `RecoveryAddress` and calls `triggerRecovery`, any address removed in the `Recovery` process can `triggerPoisonPill` to nuke the `Identity`. The user would then need to create a new `Identity` and would be responsible for engaging in recovery schemes for any Identity Applications built in the application layer.
+The Recovery scheme offers a lot of power to a `Recovery Address`; accordingly, `triggerPoisonPill` is a nuclear option to combat malicious control over an `Identity` when a `Recovery Address` is compromised. If a malicious actor compromises a user's `RecoveryAddress` and calls `triggerRecovery`, any address removed in the `Recovery` process can `triggerPoisonPill` within 7 days to nuke the `Identity`. The user would then need to create a new `Identity` and would be responsible for engaging in recovery schemes for any Identity Applications built in the application layer.
 
 #### Alternative Recovery Considerations
 In devising the Recovery process outlined in this specification, we considered many Recovery options. We ultimately selected the scheme that was most unopinionated and modular to be consistent with the the `Resolver`, `Associated Address` and `Provider` components within the specification. Still, we feel it important to highlight some of the other recovery options considered to provide deeper rationale as to why we arrived at the above scheme.

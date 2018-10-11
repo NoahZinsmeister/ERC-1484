@@ -12,37 +12,30 @@ interface ERC20 {
 
 interface SnowflakeResolver {
     function callOnSignUp() external returns (bool);
-    function onSignUp(string identity, uint allowance) external returns (bool);
+    function onSignUp(uint identity, uint allowance) external returns (bool);
     function callOnRemoval() external returns (bool);
-    function onRemoval(string identity) external returns(bool);
-}
-
-interface ClientRaindrop {
-    function getUserByAddress(address _address) external view returns (string userName);
-    function isSigned(
-        address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s
-    ) external pure returns (bool);
+    function onRemoval(uint identity) external returns(bool);
 }
 
 interface ViaContract {
-    function snowflakeCall(address resolver, string identityFrom, string identityTo, uint amount, bytes _bytes) external;
-    function snowflakeCall(address resolver, string identityFrom, address to, uint amount, bytes _bytes) external;
+    function snowflakeCall(address resolver, uint identityFrom, uint identityTo, uint amount, bytes _bytes) external;
+    function snowflakeCall(address resolver, uint identityFrom, address to, uint amount, bytes _bytes) external;
 }
 
 contract IdentityRegistry {
-    function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
-    function identityExists(string identity) public view returns (bool);
-    function getIdentity(address _address) public view returns (string identity);
+    function mintIdentityDelegated(uint identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
+    function identityExists(uint identity) public view returns (bool);
+    function getIdentity(address _address) public view returns (uint identity);
     function hasIdentity(address _address) public view returns (bool);
-    function addResolvers(string identity, address[] resolvers) public;
-    function removeResolvers(string identity, address[] resolvers) public;
-    function isResolverFor(string identity, address resolver) public view returns (bool);
+    function addResolvers(uint identity, address[] resolvers) public;
+    function removeResolvers(uint identity, address[] resolvers) public;
+    function isResolverFor(uint identity, address resolver) public view returns (bool);
     function addAddress(
-        string identity,
+        uint identity,
         address approvingAddress,
         address addressToAdd,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
-    function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+    function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 }
 
 contract Snowflake is Ownable {
@@ -101,7 +94,7 @@ contract Snowflake is Ownable {
         hydroTokenAddress = hydroToken;
     }
 
-    function mintIdentityDelegated(string identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public {
+    function mintIdentityDelegated(uint identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public {
         registry.mintIdentityDelegated(identity, identityAddress, v, r, s);
     }
 
@@ -131,7 +124,7 @@ contract Snowflake is Ownable {
     }
 
     function _addResolvers(
-        string identity, address[] resolvers, uint[] withdrawAllowances
+        uint identity, address[] resolvers, uint[] withdrawAllowances
     ) internal {
         require(resolvers.length == withdrawAllowances.length, "Malformed inputs.");
 
@@ -199,7 +192,7 @@ contract Snowflake is Ownable {
         _changeResolverAllowances(identity, resolvers, withdrawAllowances);
     }
 
-    function _changeResolverAllowances(string identity, address[] resolvers, uint[] withdrawAllowances) internal {
+    function _changeResolverAllowances(uint identity, address[] resolvers, uint[] withdrawAllowances) internal {
         require(resolvers.length == withdrawAllowances.length, "Malformed inputs.");
 
         for (uint i; i < resolvers.length; i++) {
@@ -210,22 +203,20 @@ contract Snowflake is Ownable {
     }
 
     // check resolver allowances (does not throw)
-    function getResolverAllowance(string identity, address resolver) public view returns (uint withdrawAllowance) {
+    function getResolverAllowance(uint identity, address resolver) public view returns (uint withdrawAllowance) {
         return resolverAllowances[identity][resolver];
     }
 
     function addAddress(
-        string identity,
+        uint identity,
         address approvingAddress,
         address addressToAdd,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt
     ) public {
-        IdentityRegistry registry = IdentityRegistry(identityRegistryAddress);
         registry.addAddress(identity, approvingAddress, addressToAdd, v, r, s, salt);
     }
 
-    function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public {
-        IdentityRegistry registry = IdentityRegistry(identityRegistryAddress);
+    function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public {
         registry.removeAddress(identity, addressToRemove, v, r, s, salt);
     }
 
@@ -253,12 +244,12 @@ contract Snowflake is Ownable {
         emit SnowflakeDeposit(recipientIdentity, sender, amount);
     }
 
-    function snowflakeBalance(string identity) public view returns (uint) {
+    function snowflakeBalance(uint identity) public view returns (uint) {
         return deposits[identity];
     }
 
     // transfer snowflake balance from one snowflake holder to another
-    function transferSnowflakeBalance(string identityTo, uint amount) public _hasToken(msg.sender, true) {
+    function transferSnowflakeBalance(uint identityTo, uint amount) public _hasToken(msg.sender, true) {
         _transfer(registry.getIdentity(msg.sender), identityTo, amount);
     }
 
@@ -268,20 +259,20 @@ contract Snowflake is Ownable {
     }
 
     // allows resolvers to transfer allowance amounts to other snowflakes (throws if unsuccessful)
-    function transferSnowflakeBalanceFrom(string identityFrom, string identityTo, uint amount) public {
+    function transferSnowflakeBalanceFrom(uint identityFrom, uint identityTo, uint amount) public {
         handleAllowance(identityFrom, amount);
         _transfer(identityFrom, identityTo, amount);
     }
 
     // allows resolvers to withdraw allowance amounts to external addresses (throws if unsuccessful)
-    function withdrawSnowflakeBalanceFrom(string identityFrom, address to, uint amount) public {
+    function withdrawSnowflakeBalanceFrom(uint identityFrom, address to, uint amount) public {
         handleAllowance(identityFrom, amount);
         _withdraw(identityFrom, to, amount);
     }
 
     // allows resolvers to send withdrawal amounts to arbitrary smart contracts 'to' identitys (throws if unsuccessful)
     function withdrawSnowflakeBalanceFromVia(
-        string identityFrom, address via, string identityFrom, uint amount, bytes _bytes
+        uint identityFrom, address via, uint identityFrom, uint amount, bytes _bytes
     ) public {
         handleAllowance(identityFrom, amount);
         _withdraw(identityFrom, via, amount);
@@ -291,7 +282,7 @@ contract Snowflake is Ownable {
 
     // allows resolvers to send withdrawal amounts 'to' addresses via arbitrary smart contracts
     function withdrawSnowflakeBalanceFromVia(
-        string identityFrom, address via, address to, uint amount, bytes _bytes
+        uint identityFrom, address via, address to, uint amount, bytes _bytes
     ) public {
         handleAllowance(identityFrom, amount);
         _withdraw(identityFrom, via, amount);
@@ -299,7 +290,7 @@ contract Snowflake is Ownable {
         viaContract.snowflakeCall(msg.sender, identityFrom, to, amount, _bytes);
     }
 
-    function _transfer(string identityFrom, string identityTo, uint amount) internal returns (bool) {
+    function _transfer(uint identityFrom, uint identityTo, uint amount) internal returns (bool) {
         require(registry.identityExists(identityTo), "Must transfer to a valid identity");
 
         require(deposits[identityFrom] >= amount, "Cannot withdraw more than the current deposit balance.");
@@ -309,7 +300,7 @@ contract Snowflake is Ownable {
         emit SnowflakeTransfer(identityFrom, identityTo, amount);
     }
 
-    function _withdraw(string identityFrom, address to, uint amount) internal {
+    function _withdraw(uint identityFrom, address to, uint amount) internal {
         require(to != address(this), "Cannot transfer to the Snowflake smart contract itself.");
 
         require(deposits[identityFrom] >= amount, "Cannot withdraw more than the current deposit balance.");
@@ -319,7 +310,7 @@ contract Snowflake is Ownable {
         emit SnowflakeWithdraw(to, amount);
     }
 
-    function handleAllowance(string identityFrom, uint amount) internal {
+    function handleAllowance(uint identityFrom, uint amount) internal {
         require(registry.identityExists(identityFrom), "Must call alloance for a valid identity.");
 
         // check that resolver-related details are correct
@@ -334,21 +325,21 @@ contract Snowflake is Ownable {
     }
 
     // events
-    event SnowflakeMinted(string identity);
+    event SnowflakeMinted(uint identity);
 
     event ResolverWhitelisted(address indexed resolver);
 
-    event ResolverAdded(string identity, address resolver, uint withdrawAllowance);
-    event ResolverAllowanceChanged(string identity, address resolver, uint withdrawAllowance);
-    event ResolverRemoved(string identity, address resolver);
+    event ResolverAdded(uint identity, address resolver, uint withdrawAllowance);
+    event ResolverAllowanceChanged(uint identity, address resolver, uint withdrawAllowance);
+    event ResolverRemoved(uint identity, address resolver);
 
-    event SnowflakeDeposit(string identity, address from, uint amount);
-    event SnowflakeTransfer(string identityFrom, string identityTo, uint amount);
+    event SnowflakeDeposit(uint identity, address from, uint amount);
+    event SnowflakeTransfer(uint identityFrom, uint identityTo, uint amount);
     event SnowflakeWithdraw(address to, uint amount);
     event InsufficientAllowance(
-        string identity, address indexed resolver, uint currentAllowance, uint requestedWithdraw
+        uint identity, address indexed resolver, uint currentAllowance, uint requestedWithdraw
     );
 
-    event AddressClaimed(address indexed _address, string identity);
-    event AddressUnclaimed(address indexed _address, string identity);
+    event AddressClaimed(address indexed _address, uint identity);
+    event AddressUnclaimed(address indexed _address, uint identity);
 }

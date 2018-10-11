@@ -1,12 +1,12 @@
 pragma solidity ^0.4.24;
 
 contract IdentityRegistry {
-    function getIdentity(address _address) public view returns (string identity);
-    function identityExists(string identity) public view returns (bool);
+    function getIdentity(address _address) public view returns (uint identity);
+    function identityExists(uint identity) public view returns (bool);
 }
 
 contract ResolverTesting {
-    mapping(string => string) internal emails;
+    mapping(uint => string) internal emails;
 
     address identityRegistryAddress;
 
@@ -16,12 +16,12 @@ contract ResolverTesting {
 
     function setEmailAddress(string _email) public {
         IdentityRegistry identityRegistry = IdentityRegistry(identityRegistryAddress);
-        string memory identity = identityRegistry.getIdentity(msg.sender);
+        uint identity = identityRegistry.getIdentity(msg.sender);
 
         emails[identity] = _email;
     }
 
-    function getEmail(string _identity) public view returns(string){
+    function getEmail(uint _identity) public view returns(string){
         IdentityRegistry identityRegistry = IdentityRegistry(identityRegistryAddress);
         require(identityRegistry.identityExists(_identity), "The passed identity does not exist.");
 

@@ -3,8 +3,8 @@ const ethUtil = require('ethereumjs-util')
 const web3 = new Web3(Web3.givenProvider)
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
-const ProviderExample = artifacts.require('./examples/ProviderExample.sol')
-const ResolverExample = artifacts.require('./examples/ResolverExample.sol')
+const ProviderTesting = artifacts.require('./testing/ProviderTesting.sol')
+const ResolverTesting = artifacts.require('./testing/ResolverTesting.sol')
 
 function sign (messageHash, address, privateKey, method) {
   return new Promise(resolve => {
@@ -104,12 +104,12 @@ contract('Testing Identity', function (accounts) {
       instances.IdentityRegistry = await IdentityRegistry.new()
     })
 
-    it('Provider Example contract deployed', async function () {
-      instances.ProviderExample = await ProviderExample.new(instances.IdentityRegistry.address)
+    it('Provider Testing contract deployed', async function () {
+      instances.ProviderTesting = await ProviderTesting.new(instances.IdentityRegistry.address)
     })
 
-    it('Resolver Example contract deployed', async function () {
-      instances.ResolverExample = await ResolverExample.new(instances.IdentityRegistry.address)
+    it('Resolver Testing contract deployed', async function () {
+      instances.ResolverTesting = await ResolverTesting.new(instances.IdentityRegistry.address)
     })
   })
 

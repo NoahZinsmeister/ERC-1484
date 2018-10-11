@@ -5,7 +5,7 @@ contract IdentityRegistry {
     function identityExists(string identity) public view returns (bool);
 }
 
-contract ResolverExample {
+contract ResolverTesting {
     mapping(string => string) internal emails;
 
     address identityRegistryAddress;

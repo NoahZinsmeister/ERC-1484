@@ -23,7 +23,7 @@ The proliferation of on-chain identity solutions can be traced back to the fact 
 ## Definitions
 - `Registry`: A single smart contract which is the hub for all user `Identities`. The `Registry's` primary responsibility is enforcing a global namespace for identities, which are individually denominated by a unique `uint`.
 
-- `Identity`: The core data structure that constitutes a user's identity. Identities are originally denominated only by a `uint` which is unique, but uninformative. Each `Resolver` added to an `Identity` makes the `Identity` more informative.
+- `Identity`: The core data structure that constitutes a user's identity. Identities are originally denominated only by a `uint`, named `Ethereum identification number`, which is unique, but uninformative. Each `Resolver` added to an `Identity` makes the `Identity` more informative.
 
 - `Resolver`: A smart contract containing arbitrary information pertaining to users' `Identities`. A resolver may implement an identity standard, such as ERC 725, or may consist of a smart contract leveraging or declaring any identifying information about `Identities`. These could be simple attestation structures or more sophisticated financial dApps, social media dApps, etc.
 
@@ -108,10 +108,10 @@ The main criticism of an identity layer comes from restrictiveness; we aim to li
 
 #### identityExists
 
-Returns a `bool` indicating whether or not an `Identity` denominated by the passed `identity` string exists.
+Returns a `bool` indicating whether or not an `Identity` denominated by the passed `ein` string exists.
 
 ```solidity
-function identityExists(string identity) public view returns (bool);
+function identityExists(uint ein) public view returns (bool);
 ```
 
 #### hasIdentity
@@ -124,50 +124,50 @@ function hasIdentity(address _address) public view returns (bool);
 
 #### getIdentity
 
-Returns the `identity` associated with the passed `_address`. Throws if no such `identity` exists.
+Returns the `ein` associated with the passed `_address`. Throws if no such `ein` exists.
 
 ```solidity
-function getIdentity(address _address) public view returns (string identity);
+function getEIN(address _address) public view returns (uint ein);
 ```
 
 #### isProviderFor
 
-Returns a `bool` indicating whether or not the passed `provider` is assigned to the passed `identity`.
+Returns a `bool` indicating whether or not the passed `provider` is assigned to the passed `ein`.
 
 ```solidity
-function isProviderFor(string identity, address provider) public view returns (bool);
+function isProviderFor(uint ein, address provider) public view returns (bool);
 ```
 
 #### isResolverFor
 
-Returns a `bool` indicating whether or not the passed `resolver` is assigned to the passed `identity`.
+Returns a `bool` indicating whether or not the passed `resolver` is assigned to the passed `ein`.
 
 ```solidity
-function isResolverFor(string identity, address resolver) public view returns (bool);
+function isResolverFor(uint ein, address resolver) public view returns (bool);
 ```
 
 #### isAddressFor
 
-Returns a `bool` indicating whether or not the passed `_address` is owned by the passed `identity`.
+Returns a `bool` indicating whether or not the passed `_address` is owned by the passed `ein`.
 
 ```solidity
-function isAddressFor(string identity, address _address) public view returns (bool);
+function isAddressFor(uint ein, address _address) public view returns (bool);
 ```
 
 #### getDetails
 
-Returns three `address` arrays of `associatedAddresses`, `providers` and `resolvers`. All of these arrays represent the addresses associated with the passed `identity`.
+Returns three `address` arrays of `associatedAddresses`, `providers` and `resolvers`. All of these arrays represent the addresses associated with the passed `ein`.
 
 ```solidity
-function getDetails(string identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
+function getDetails(uint ein) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
 ```
 
 #### mintIdentity
 
-Mints an `Identity` with the passed `identity` and `provider`.
+Mints an `Identity` with the passed `ein` and `provider`.
 
 ```solidity
-function mintIdentity(string identity, address provider) public;
+function mintIdentity(address recoveryAddress, address provider, address[] resolvers) public returns (uint ein);
 ```
 
 #### mintIdentityDelegated
@@ -175,7 +175,7 @@ function mintIdentity(string identity, address provider) public;
 Preforms the same logic as `mintIdentity`, but can be called by a `provider`. This function requires a signature for the `associatedAddress` to confirm their consent.
 
 ```solidity
-function mintIdentityDelegated(string identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
+function mintIdentityDelegated(address recoveryAddress, address associatedAddress, address[] resolvers, uint8 v, bytes32 r, bytes32 s) public returns (uint ein);
 ```
 
 #### addProviders
@@ -194,49 +194,181 @@ Removes an array of `providers` from the `Identity` of the `msg.sender`.
 function removeProviders(address[] providers) public;
 ```
 
-#### addResolvers
+Triggers event: [ProviderRemoved](#providerremoved)
 
-Adds an array of `resolvers` to the passed `identity`. This must be called by a `provider`.
+#### removeProviders
+
+Removes an array of `providers` from the `Identity` of the `ein` passed.
 
 ```solidity
-function addResolvers(string identity, address[] resolvers) public;
+function removeProviders(uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+```
+
+Triggers event: [ProviderRemoved](#providerremoved)
+
+#### addResolvers
+
+Adds an array of `resolvers` to the passed `ein`. This must be called by a `provider`.
+
+```solidity
+function addResolvers(uint ein, address[] resolvers) public;
 ```
 
 #### removeResolvers
 
-Removes an array of `resolvers` from the passed `identity`. This must be called by a `provider`.
+Removes an array of `resolvers` from the passed `ein`. This must be called by a `provider`.
 
 ```solidity
-function removeResolvers(string identity, address[] resolvers) public;
+function removeResolvers(uint ein, address[] resolvers) public;
 ```
 
 #### addAddress
 
-Adds the `addressToAdd` to the passed `identity`. Requires signatures from both the `addressToAdd` and the `approvingAddress`.
+Adds the `addressToAdd` to the passed `ein`. Requires signatures from both the `addressToAdd` and the `approvingAddress`.
 
 ```solidity
-function addAddress(string identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
+function addAddress(uint ein, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
 ```
 
 #### removeAddress
 
-Removes an `addressToRemove` from the passed `identity`. Requires a signature from the `addressToRemove`.
+Removes an `addressToRemove` from the passed `ein`. Requires a signature from the `addressToRemove`.
 
 ```solidity
-function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+function removeAddress(uint ein, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 ```
 
-#### Solidity Interface
+Triggers event: [AddressRemoved](#addressremoved)
+
+#### initiateRecoveryAddressChange
+
+Initiates a change in the current `recoveryAddress` for a given `ein`.
+
+```solidity
+function initiateRecoveryAddressChange(uint ein, address newRecoveryAddress) public;
+```
+
+Triggers event: [RecoveryAddressChangeInitiated](#recoveryaddresschangeinitiated)
+
+#### triggerRecovery
+
+Initiates `ein` recovery from the current `recoveryAddress`.
+
+```solidity
+function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s) public;
+```
+
+Triggers event: [RecoveryTriggered](#recoverytriggered)
+
+#### triggerPoisonPill
+
+Initiates the `poison pill` on an `ein`. This will render the `Identity` unusable.
+
+```solidity
+function triggerPoisonPill(uint ein, address[] firstChunk, address[] lastChunk, bool clearResolvers) public;
+```
+
+Triggers event: [Poisoned](#poisoned)
+
+### Events
+
+#### IdentityMinted
+
+MUST be triggered when an `Identity` is minted.
+
+```solidity
+event IdentityMinted(uint ein, address associatedAddress, address provider, bool delegated);
+```
+
+#### AddressAdded
+
+MUST be triggered when an address is added to an `Identity`.
+
+```solidity
+event AddressAdded(uint indexed ein, address addedAddress, address approvingAddress, address provider);
+```
+
+#### AddressRemoved
+
+MUST be triggered when an address is removed from an `Identity`.
+
+```solidity
+event AddressRemoved(uint indexed ein, address removedAddress, address provider);
+```
+
+#### ProviderAdded
+
+MUST be triggered when a provider is added to an `Identity`.
+
+```solidity
+event ProviderAdded(uint indexed ein, address provider, bool delegated);
+```
+
+#### ProviderRemoved
+
+MUST be triggered when a provider is removed.
+
+```solidity
+emit ProviderRemoved(uint indexed ein, address provider, bool delegated);
+```
+
+#### ResolverAdded
+
+MUST be triggered when a resolver is added.
+
+```solidity
+event ResolverAdded(uint indexed ein, address resolvers, address provider);
+```
+
+#### ResolverRemoved
+
+MUST be triggered when a resolver is removed.
+
+```solidity
+event ResolverRemoved(uint indexed ein, address resolvers, address provider);
+```
+
+#### RecoveryAddressChangeInitiated
+
+MUST be triggered when a recovery address change is initiated.
+
+```solidity
+event RecoveryAddressChangeInitiated(uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress);
+```
+
+#### RecoveryTriggered
+
+MUST be triggered when recovery is initiated.
+
+```solidity
+event RecoveryTriggered(uint indexed ein, address recoveryAddress, address[] oldAssociatedAddress, address newAssociatedAddress);
+```
+
+#### Poisoned
+
+MUST be triggered when an `Identity` is poisoned.
+
+```solidity
+event Poisoned(uint indexed ein, address poisoner, bool resolversCleared);
+```
+
+
+### Solidity Interface
 ```solidity
 pragma solidity ^0.4.24;
 
 contract ERCTBD {
 
-  event IdentityMinted(string identity, address associatedAddress, address provider, bool delegated);
-  event ResolverAdded(string identity, address resolvers, address provider);
-  event ResolverRemoved(string identity, address resolvers, address provider);
-  event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
-  event AddressRemoved(string identity, address removedAddress, address provider);
+  event IdentityMinted(uint ein, address associatedAddress, address provider, bool delegated);
+  event AddressAdded(uint indexed ein, address addedAddress, address approvingAddress, address provider);
+  event AddressRemoved(uint indexed ein, address removedAddress, address provider);
+  event ProviderAdded(uint indexed ein, address provider, bool delegated);
+  event ProviderRemoved(uint indexed ein, address provider, bool delegated);
+  event ResolverAdded(uint indexed ein, address resolvers, address provider);
+  event ResolverRemoved(uint indexed ein, address resolvers, address provider);
+  event RecoveryAddressChangeInitiated(uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress);
+  event RecoveryTriggered(uint indexed ein, address recoveryAddress, address[] oldAssociatedAddress, address newAssociatedAddress);
+  event Poisoned(uint indexed ein, address poisoner, bool resolversCleared);
 
   struct Identity {
     AddressSet.Set associatedAddresses;
@@ -244,32 +376,37 @@ contract ERCTBD {
     AddressSet.Set resolvers;
   }
 
-  function identityExists(string identity) public view returns (bool);
+  function identityExists(uint ein) public view returns (bool);
 
   function hasIdentity(address _address) public view returns (bool);
-  function getIdentity(address _address) public view returns (string identity);
+  function getEIN(address _address) public view returns (uint ein);
 
-  function isProviderFor(string identity, address provider) public view returns (bool);
-  function isResolverFor(string identity, address resolver) public view returns (bool);
-  function isAddressFor(string identity, address _address) public view returns (bool);
+  function isProviderFor(uint ein, address provider) public view returns (bool);
+  function isResolverFor(uint ein, address resolver) public view returns (bool);
+  function isAddressFor(uint ein, address _address) public view returns (bool);
 
-  function getDetails(string identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
+  function getDetails(uint ein) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
 
-  function mintIdentity(string identity, address provider) public;
-  function mintIdentityDelegated(string identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
+  function mintIdentity(address recoveryAddress, address provider, address[] resolvers) public returns (uint ein);
+  function mintIdentityDelegated(address recoveryAddress, address associatedAddress, address[] resolvers, uint8 v, bytes32 r, bytes32 s) public returns (uint ein);
 
   function addProviders(address[] providers) public;
   function removeProviders(address[] providers) public;
+  function removeProviders(uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 
-  function addResolvers(string identity, address[] resolvers) public;
-  function removeResolvers(string identity, address[] resolvers) public;
+  function addResolvers(uint ein, address[] resolvers) public;
+  function removeResolvers(uint ein, address[] resolvers) public;
 
-  function addAddress(string identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
-  function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+  function addAddress(uint ein, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
+  function removeAddress(uint ein, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+
+  function initiateRecoveryAddressChange(uint ein, address newRecoveryAddress) public;
+  function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s) public;
+  function triggerPoisonPill(uint ein, address[] firstChunk, address[] lastChunk, bool clearResolvers) public;
 }
 ```
 ## Backwards Compatibility
-`Identities` established under this standard consist of existing Ethereum addresses; accordingly, identity construction has no backwards compatibility issues. Deployed, non-upgradeable smart contracts that wish to become `Resolvers` to a user's `Identity` will need to write wrapper contracts that resolve addresses to `Identities` with `getIdentity`.
+`Identities` established under this standard consist of existing Ethereum addresses; accordingly, identity construction has no backwards compatibility issues. Deployed, non-upgradeable smart contracts that wish to become `Resolvers` to a user's `ein` will need to write wrapper contracts that resolve addresses to `Identities` with `getEIN`.
 
 ## Additional References
 

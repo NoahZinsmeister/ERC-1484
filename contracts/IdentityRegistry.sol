@@ -40,7 +40,7 @@ contract IdentityRegistry is SignatureVerifier {
         AddressSet.Set resolvers;
     }
 
-    uint public nextIdentity = 1;
+    uint public nextEIN = 1;
     mapping (uint => Identity) private identityDirectory;
     mapping (address => uint) private associatedAddressDirectory;
 
@@ -65,13 +65,13 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // checks whether a given identity exists (does not throw)
-    function identityExists(uint identity) public view returns (bool) {
-        return identity != 0 && identity < nextIdentity;
+    function identityExists(uint ein) public view returns (bool) {
+        return ein != 0 && ein < nextEIN;
     }
 
     // checks whether a given identity exists
-    modifier _identityExists(uint identity) {
-        require(identityExists(identity), "The passed identity does not exist.");
+    modifier _identityExists(uint ein) {
+        require(identityExists(ein), "The identity does not exist.");
         _;
     }
 
@@ -86,40 +86,40 @@ contract IdentityRegistry is SignatureVerifier {
         _;
     }
 
-    // gets the identity of an address (throws if the address doesn't have an identity)
-    function getIdentity(address _address) public view _hasIdentity(_address, true) returns (uint identity) {
+    // gets the ein of an address (throws if the address doesn't have an ein)
+    function getEIN(address _address) public view _hasIdentity(_address, true) returns (uint ein) {
         return associatedAddressDirectory[_address];
     }
 
     // checks whether a given identity has an address (does not throw)
-    function isAddressFor(uint identity, address _address) public view returns (bool) {
-        if (!identityExists(identity)) return false;
-        return identityDirectory[identity].associatedAddresses.contains(_address);
+    function isAddressFor(uint ein, address _address) public view returns (bool) {
+        if (!identityExists(ein)) return false;
+        return identityDirectory[ein].associatedAddresses.contains(_address);
     }
 
     // checks whether a given identity has a provider (does not throw)
-    function isProviderFor(uint identity, address provider) public view returns (bool) {
-        if (!identityExists(identity)) return false;
-        return identityDirectory[identity].providers.contains(provider);
+    function isProviderFor(uint ein, address provider) public view returns (bool) {
+        if (!identityExists(ein)) return false;
+        return identityDirectory[ein].providers.contains(provider);
     }
 
     // enforces that an identity has a provider
-    modifier _isProviderFor(uint identity, address provider) {
-        require(isProviderFor(identity, provider), "The passed identity has/has not set the passed provider.");
+    modifier _isProviderFor(uint ein, address provider) {
+        require(isProviderFor(ein, provider), "The identity has/has not set the passed provider.");
         _;
     }
 
     // checks whether a given identity has a resolver (does not throw)
-    function isResolverFor(uint identity, address resolver) public view returns (bool) {
-        if (!identityExists(identity)) return false;
-        return identityDirectory[identity].resolvers.contains(resolver);
+    function isResolverFor(uint ein, address resolver) public view returns (bool) {
+        if (!identityExists(ein)) return false;
+        return identityDirectory[ein].resolvers.contains(resolver);
     }
 
-    // functions to read identity values (throws if the passed identity does not exist)
-    function getDetails(uint identity) public view _identityExists(identity)
+    // functions to read identity values (throws if the passed EIN does not exist)
+    function getDetails(uint ein) public view _identityExists(ein)
         returns (address recoveryAddress, address[] associatedAddresses, address[] providers, address[] resolvers)
     {
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
         return (
             _identity.recoveryAddress,
             _identity.associatedAddresses.members,
@@ -136,7 +136,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // mints a new identity for the msg.sender
-    function mintIdentity(address recoveryAddress, address provider, address[] resolvers) public returns (uint identity)
+    function mintIdentity(address recoveryAddress, address provider, address[] resolvers) public returns (uint ein)
     {
         return mintIdentity(recoveryAddress, msg.sender, provider, resolvers, false);
     }
@@ -145,7 +145,7 @@ contract IdentityRegistry is SignatureVerifier {
     function mintIdentityDelegated(
         address recoveryAddress, address associatedAddress, address[] resolvers, uint8 v, bytes32 r, bytes32 s
     )
-        public returns (uint identity)
+        public returns (uint ein)
     {
         require(
             isSigned(
@@ -173,10 +173,10 @@ contract IdentityRegistry is SignatureVerifier {
     )
         private _hasIdentity(associatedAddress, false) returns (uint)
     {
-        uint identity = nextIdentity++;
+        uint ein = nextEIN++;
 
         // set identity variables
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
         _identity.recoveryAddress = recoveryAddress;
         _identity.associatedAddresses.insert(associatedAddress);
         _identity.providers.insert(provider);
@@ -185,55 +185,55 @@ contract IdentityRegistry is SignatureVerifier {
         }
 
         // set reverse address lookup
-        associatedAddressDirectory[associatedAddress] = identity;
+        associatedAddressDirectory[associatedAddress] = ein;
 
-        emit IdentityMinted(identity, recoveryAddress, associatedAddress, provider, resolvers, delegated);
+        emit IdentityMinted(ein, recoveryAddress, associatedAddress, provider, resolvers, delegated);
 
-        return identity;
+        return ein;
     }
 
     // allow providers to add addresses
     function addAddress(
-        uint identity,
+        uint ein,
         address addressToAdd,
         address approvingAddress,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt
     )
-        public _isProviderFor(identity, msg.sender) _hasIdentity(addressToAdd, false)
+        public _isProviderFor(ein, msg.sender) _hasIdentity(addressToAdd, false)
     {
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
         require(
             _identity.associatedAddresses.contains(approvingAddress),
-            "The passed approvingAddress is not associated with the passed identity."
+            "The passed approvingAddress is not associated with the referenced identity."
         );
         require(_identity.associatedAddresses.length() <= maxAssociatedAddresses, "Cannot add >20 addresses.");
 
-        bytes32 messageHash = keccak256(abi.encodePacked("Add Address", address(this), identity, addressToAdd, salt));
+        bytes32 messageHash = keccak256(abi.encodePacked("Add Address", address(this), ein, addressToAdd, salt));
         require(signatureLog[messageHash] == false, "Message hash has already been used.");
         require(isSigned(approvingAddress, messageHash, v[0], r[0], s[0]), "Permission denied from approving address.");
         require(isSigned(addressToAdd, messageHash, v[1], r[1], s[1]), "Permission denied from address to add.");
         signatureLog[messageHash] = true;
 
         _identity.associatedAddresses.insert(addressToAdd);
-        associatedAddressDirectory[addressToAdd] = identity;
+        associatedAddressDirectory[addressToAdd] = ein;
 
-        emit AddressAdded(identity, addressToAdd, approvingAddress, msg.sender);
+        emit AddressAdded(ein, addressToAdd, approvingAddress, msg.sender);
     }
 
     // allow providers to remove addresses
-    function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt)
-        public _isProviderFor(identity, msg.sender)
+    function removeAddress(uint ein, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt)
+        public _isProviderFor(ein, msg.sender)
     {
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
 
         require(
             _identity.associatedAddresses.contains(addressToRemove),
-            "The passed addressToRemove is not associated with the passed identity."
+            "The passed addressToRemove is not associated with the referenced identity."
         );
 
         bytes32 messageHash = keccak256(
             abi.encodePacked(
-                "Remove Address", address(this), identity, addressToRemove, salt
+                "Remove Address", address(this), ein, addressToRemove, salt
             )
         );
         require(signatureLog[messageHash] == false, "Message hash has already been used.");
@@ -243,107 +243,107 @@ contract IdentityRegistry is SignatureVerifier {
         _identity.associatedAddresses.remove(addressToRemove);
         delete associatedAddressDirectory[addressToRemove];
 
-        emit AddressRemoved(identity, addressToRemove, msg.sender);
+        emit AddressRemoved(ein, addressToRemove, msg.sender);
     }
 
     // allows addresses associated with an identity to add providers
     function addProviders(address[] providers) public _hasIdentity(msg.sender, true) {
-        addProviders(getIdentity(msg.sender), providers, false);
+        addProviders(getEIN(msg.sender), providers, false);
     }
 
     // allows providers to add other providers for addresses
     function addProviders(
-        uint identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
+        uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
     )
-        public _isProviderFor(identity, msg.sender)
+        public _isProviderFor(ein, msg.sender)
     {
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
 
         require(
             _identity.associatedAddresses.contains(approvingAddress),
-            "The passed approvingAddress is not associated with the passed identity."
+            "The passed approvingAddress is not associated with the referenced identity."
         );
 
-        bytes32 messageHash = keccak256(abi.encodePacked("Add Providers", address(this), identity, providers, salt));
+        bytes32 messageHash = keccak256(abi.encodePacked("Add Providers", address(this), ein, providers, salt));
         require(signatureLog[messageHash] == false, "Message hash has already been used.");
         require(isSigned(approvingAddress, messageHash, v, r, s), "Permission denied.");
         signatureLog[messageHash] = true;
 
-        addProviders(identity, providers, true);
+        addProviders(ein, providers, true);
     }
 
     // common functionality to add providers
-    function addProviders(uint identity, address[] providers, bool delegated) private {
-        Identity storage _identity = identityDirectory[identity];
+    function addProviders(uint ein, address[] providers, bool delegated) private {
+        Identity storage _identity = identityDirectory[ein];
         for (uint i; i < providers.length; i++) {
             _identity.providers.insert(providers[i]);
-            emit ProviderAdded(identity, providers[i], delegated);
+            emit ProviderAdded(ein, providers[i], delegated);
         }
     }
 
     // allows addresses associated with an identity to remove providers
     function removeProviders(address[] providers) public _hasIdentity(msg.sender, true) {
-        removeProviders(getIdentity(msg.sender), providers, false);
+        removeProviders(getEIN(msg.sender), providers, false);
     }
 
     // allows providers to remove other providers for addresses
     function removeProviders(
-        uint identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
+        uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
     )
-        public _isProviderFor(identity, msg.sender)
+        public _isProviderFor(ein, msg.sender)
     {
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
 
         require(
             _identity.associatedAddresses.contains(approvingAddress),
-            "The passed approvingAddress is not associated with the passed identity."
+            "The passed approvingAddress is not associated with the referenced identity."
         );
 
-        bytes32 messageHash = keccak256(abi.encodePacked("Remove Providers", address(this), identity, providers, salt));
+        bytes32 messageHash = keccak256(abi.encodePacked("Remove Providers", address(this), ein, providers, salt));
         require(signatureLog[messageHash] == false, "Message hash has already been used.");
         require(isSigned(approvingAddress, messageHash, v, r, s), "Permission denied.");
         signatureLog[messageHash] = true;
 
-        removeProviders(identity, providers, true);
+        removeProviders(ein, providers, true);
     }
 
     // common functionality to remove providers
-    function removeProviders(uint identity, address[] providers, bool delegated) private {
-        Identity storage _identity = identityDirectory[identity];
+    function removeProviders(uint ein, address[] providers, bool delegated) private {
+        Identity storage _identity = identityDirectory[ein];
         for (uint i; i < providers.length; i++) {
             _identity.providers.remove(providers[i]);
-            emit ProviderRemoved(identity, providers[i], delegated);
+            emit ProviderRemoved(ein, providers[i], delegated);
         }
     }
 
     // allow providers to add resolvers
-    function addResolvers(uint identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
-        Identity storage _identity = identityDirectory[identity];
+    function addResolvers(uint ein, address[] resolvers) public _isProviderFor(ein, msg.sender) {
+        Identity storage _identity = identityDirectory[ein];
         for (uint i; i < resolvers.length; i++) {
             _identity.resolvers.insert(resolvers[i]);
-            emit ResolverAdded(identity, resolvers[i], msg.sender);
+            emit ResolverAdded(ein, resolvers[i], msg.sender);
         }
     }
 
     // allow providers to remove resolvers
-    function removeResolvers(uint identity, address[] resolvers) public _isProviderFor(identity, msg.sender) {
-        Identity storage _identity = identityDirectory[identity];
+    function removeResolvers(uint ein, address[] resolvers) public _isProviderFor(ein, msg.sender) {
+        Identity storage _identity = identityDirectory[ein];
         for (uint i; i < resolvers.length; i++) {
             _identity.resolvers.remove(resolvers[i]);
-            emit ResolverRemoved(identity, resolvers[i], msg.sender);
+            emit ResolverRemoved(ein, resolvers[i], msg.sender);
         }
     }
 
 
     // initiate a change in recovery address
-    function initiateRecoveryAddressChange(uint identity, address newRecoveryAddress)
-        public _isProviderFor(identity, msg.sender)
+    function initiateRecoveryAddressChange(uint ein, address newRecoveryAddress)
+        public _isProviderFor(ein, msg.sender)
     {
-        RecoveryAddressChange storage log = recoveryAddressChangeLogs[identity];
+        RecoveryAddressChange storage log = recoveryAddressChangeLogs[ein];
         require(isTimedOut(log.timestamp), "Pending change of recovery address has not timed out.");
 
         // log the old recovery address
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
         address oldRecoveryAddress = _identity.recoveryAddress;
         // solium-disable-next-line security/no-block-members
         log.timestamp = block.timestamp;
@@ -352,19 +352,19 @@ contract IdentityRegistry is SignatureVerifier {
         // make the change
         _identity.recoveryAddress = newRecoveryAddress;
 
-        emit RecoveryAddressChangeInitiated(identity, oldRecoveryAddress, newRecoveryAddress);
+        emit RecoveryAddressChangeInitiated(ein, oldRecoveryAddress, newRecoveryAddress);
     }
 
     // initiate recovery, only callable by the current recovery address, or the one changed within the past 2 weeks
-    function triggerRecovery(uint identity, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s)
-        public  _identityExists(identity) _hasIdentity(newAssociatedAddress, false)
+    function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s)
+        public  _identityExists(ein) _hasIdentity(newAssociatedAddress, false)
     {
-        RecoveredChange storage recoveredChange = recoveredChangeLogs[identity];
+        RecoveredChange storage recoveredChange = recoveredChangeLogs[ein];
         require(isTimedOut(recoveredChange.timestamp), "It's not been long enough since the last recovery.");
 
         // ensure the sender is the recovery address/old recovery address if there's been a recent change
-        Identity storage _identity = identityDirectory[identity];
-        RecoveryAddressChange storage recoveryAddressChange = recoveryAddressChangeLogs[identity];
+        Identity storage _identity = identityDirectory[ein];
+        RecoveryAddressChange storage recoveryAddressChange = recoveryAddressChangeLogs[ein];
         if (isTimedOut(recoveryAddressChange.timestamp)) {
             require(
                 msg.sender == _identity.recoveryAddress,
@@ -380,7 +380,7 @@ contract IdentityRegistry is SignatureVerifier {
         require(
             isSigned(
                 newAssociatedAddress,
-                keccak256(abi.encodePacked("Recover", address(this), identity, newAssociatedAddress)),
+                keccak256(abi.encodePacked("Recover", address(this), ein, newAssociatedAddress)),
                 v, r, s
             ),
             "Permission denied."
@@ -395,22 +395,22 @@ contract IdentityRegistry is SignatureVerifier {
         // remove identity data, and add the new address as the sole associated address
         clearAllIdentityData(_identity, false);
         _identity.associatedAddresses.insert(newAssociatedAddress);
-        associatedAddressDirectory[newAssociatedAddress] = identity;
+        associatedAddressDirectory[newAssociatedAddress] = ein;
 
         // set the msg.sender to the recovery address
         _identity.recoveryAddress = msg.sender;
 
-        emit RecoveryTriggered(identity, msg.sender, oldAssociatedAddresses, newAssociatedAddress);
+        emit RecoveryTriggered(ein, msg.sender, oldAssociatedAddresses, newAssociatedAddress);
     }
 
     // allows addresses recently removed by recovery to permanently disable the identity they were removed from
-    function triggerPoisonPill(uint identity, address[] firstChunk, address[] lastChunk, bool clearResolvers)
-        public _identityExists(identity)
+    function triggerPoisonPill(uint ein, address[] firstChunk, address[] lastChunk, bool clearResolvers)
+        public _identityExists(ein)
     {
-        RecoveredChange storage log = recoveredChangeLogs[identity];
+        RecoveredChange storage log = recoveredChangeLogs[ein];
         require(!isTimedOut(log.timestamp), "No addresses have recently been removed from a recovery.");
         
-        // ensure that the msg.sender was an old associated address for the passed identity
+        // ensure that the msg.sender was an old associated address for the referenced identity
         address[1] memory middleChunk = [msg.sender];
         require(
             keccak256(abi.encodePacked(firstChunk, middleChunk, lastChunk)) == log.hashedOldAssociatedAddresses,
@@ -418,10 +418,10 @@ contract IdentityRegistry is SignatureVerifier {
         );
 
         // poison the identity
-        Identity storage _identity = identityDirectory[identity];
+        Identity storage _identity = identityDirectory[ein];
         clearAllIdentityData(_identity, clearResolvers);
 
-        emit Poisoned(identity, msg.sender, clearResolvers);
+        emit Poisoned(ein, msg.sender, clearResolvers);
     }
 
     // removes all associated addresses, providers, and optionally resolvers from an identity
@@ -438,22 +438,22 @@ contract IdentityRegistry is SignatureVerifier {
 
     // define events
     event IdentityMinted(
-        uint indexed identity,
+        uint indexed ein,
         address recoveryAddress,
         address associatedAddress,
         address provider,
         address[] resolvers,
         bool delegated
     );
-    event AddressAdded(uint indexed identity, address addedAddress, address approvingAddress, address provider);
-    event AddressRemoved(uint indexed identity, address removedAddress, address provider);
-    event ProviderAdded(uint indexed identity, address provider, bool delegated);
-    event ProviderRemoved(uint indexed identity, address provider, bool delegated);
-    event ResolverAdded(uint indexed identity, address resolvers, address provider);
-    event ResolverRemoved(uint indexed identity, address resolvers, address provider);
-    event RecoveryAddressChangeInitiated(uint indexed identity, address oldRecoveryAddress, address newRecoveryAddress);
+    event AddressAdded(uint indexed ein, address addedAddress, address approvingAddress, address provider);
+    event AddressRemoved(uint indexed ein, address removedAddress, address provider);
+    event ProviderAdded(uint indexed ein, address provider, bool delegated);
+    event ProviderRemoved(uint indexed ein, address provider, bool delegated);
+    event ResolverAdded(uint indexed ein, address resolvers, address provider);
+    event ResolverRemoved(uint indexed ein, address resolvers, address provider);
+    event RecoveryAddressChangeInitiated(uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress);
     event RecoveryTriggered(
-        uint indexed identity, address recoveryAddress, address[] oldAssociatedAddresses, address newAssociatedAddress
+        uint indexed ein, address recoveryAddress, address[] oldAssociatedAddresses, address newAssociatedAddress
     );
-    event Poisoned(uint indexed identity, address poisoner, bool resolversCleared);
+    event Poisoned(uint indexed ein, address poisoner, bool resolversCleared);
 }

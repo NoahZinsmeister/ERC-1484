@@ -1,7 +1,7 @@
 {
   "name": "identity-erc",
   "version": "1.0.0",
-  "description": "",
+  "description": "Identity Aggregation Protocol for Ethereum",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hydrogen-dev/identity-erc.git"
@@ -12,9 +12,25 @@
     "buidl": "rm -rf build/ && npx truffle compile",
     "chain": "npx ganache-cli --port 8545 --seed hydro"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "ERC",
+    "ethereum",
+    "solidity",
+    "identity"
+  ],
+  "author": "Noah Zinsmeister",
+  "contributors": [
+    {
+      "name": "Anurag Angara"
+    },
+    {
+      "name": "Andy Chorlian"
+    },
+    {
+      "name": "Shane Hampton"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
   "dependencies": {
     "ajv": "^6.5.4",
     "ethereumjs-util": "^5.2.0",

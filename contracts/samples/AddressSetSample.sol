@@ -3,7 +3,7 @@ pragma solidity ^0.4.24;
 import "../AddressSet/AddressSet.sol";
 
 
-contract AddressSetTesting {
+contract AddressSetSample {
     using AddressSet for AddressSet.Set;
 
     AddressSet.Set internal mySet;

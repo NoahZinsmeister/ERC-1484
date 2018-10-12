@@ -52,7 +52,7 @@ async function verifyIdentity (identity, expectedDetails) {
     const hasIdentity = await instances.IdentityRegistry.hasIdentity(address)
     assert.isTrue(hasIdentity, "address unexpectedly does/doesn't have an identity.")
 
-    const onChainIdentity = await instances.IdentityRegistry.getIdentity(address)
+    const onChainIdentity = await instances.IdentityRegistry.getEIN(address)
     assert.isTrue(onChainIdentity.eq(identity), 'on chain identity was set incorrectly.')
 
     const isAddressFor = await instances.IdentityRegistry.isAddressFor(identity, address)

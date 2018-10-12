@@ -13,7 +13,7 @@ created: 2018-10-08
 A protocol for aggregating digital identity information that's broadly interoperable with existing, proposed, and hypothetical future digital identity standards.
 
 ## Abstract
-This EIP proposes a identity management and aggregation framework on the Ethereum blockchain. It allows users to claim an identity via a singular identity `Registry` smart contract, associate it with other Ethereum addresses, and use it to interface with smart contracts providing arbitrarily complex identity-related functionality.
+This EIP proposes an identity management and aggregation framework on the Ethereum blockchain. It allows users to claim an identity via a singular identity `Registry` smart contract, associate it with other Ethereum addresses, and use it to interface with smart contracts providing arbitrarily complex identity-related functionality.
 
 ## Motivation
 Emerging identity standards and related frameworks proposed by the Ethereum community (including ERCs/EIPs [725](https://github.com/ethereum/EIPs/issues/725), [735](https://github.com/ethereum/EIPs/issues/735), [780](https://github.com/ethereum/EIPs/issues/780), [1056](https://github.com/ethereum/EIPs/issues/1056), etc.) define and instrumentalize individuals' digital identities in a variety of ways. As existing approaches mature, new standards emerge, and isolated, non-standard approaches to identity develop, managing multiple identities will becoming increasingly burdensome and involve unnecessary duplication of work.
@@ -23,22 +23,23 @@ The proliferation of on-chain identity solutions can be traced back to the fact 
 ## Definitions
 - `Registry`: A single smart contract which is the hub for all user `Identities`. The `Registry's` primary responsibility is enforcing a global namespace for identities, which are individually denominated by a unique `uint`.
 
-- `Identity`: The core data structure that constitutes a user's identity. Identities consist of 3 sets of addresses: `Associated Addresses`, `Providers`, and `Resolvers`.
+- `Identity`: The core data structure that constitutes a user's identity. Identities are originally denominated only by a `uint` which is unique, but uninformative. Each `Resolver` added to an `Identity` makes the `Identity` more informative.
 
-- `Associated Address`: An Ethereum address publicly associated with an `Identity`. In order for an address to become an `Associated Address` for an `Identity`, the `Identity` must produce:
+- `Resolver`: A smart contract containing arbitrary information pertaining to users' `Identities`. A resolver may implement an identity standard, such as ERC 725, or may consist of a smart contract leveraging or declaring any identifying information about `Identities`. These could be simple attestation structures or more sophisticated financial dApps, social media dApps, etc.
+
+- `Associated Address`: An Ethereum address publicly associated with an `Identity` at the `Registry` level. In order for an address to become an `Associated Address` for an `Identity`, the `Identity` must produce:
 
   - a signed message from the candidate address indicating intent to associate itself with the `Identity`
   - a signed message from an existing `Associated Address` of the `Identity` indicating the same.
 
-- `Recovery Address`: An Ethereum address with functionality to recover lost identities as outlined in the **Address Recovery** section
+`Identities` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`. Signatures are stored in the `Registry` to prevent replay attacks.
 
-- `Poison Pill`: In the event of irrecoverable control of your `Identity` we have implemented the ability to "nuke" your the `Identity`. When this happens, all `associated addresses`, `resolvers` and `providers` will be removed and the `Identity` will be unusable.
+- `Provider`: An Ethereum address (typically but not by definition a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf. `Providers` exist to enable arbitrarily sophisticated logic the process of building out an individual's identity.
 
- `Identities` can remove an `Associated Address` by producing a signed message indicating intent to disassociate itself from the `Identity`. Signatures are stored in the `Registry` to prevent replay attacks.
+- `Recovery Address`: An Ethereum address with arbitrarily sophisticated functionality to recover lost identities as outlined in the **Address Recovery** section.
 
-- `Provider`: An Ethereum address (typically but not by definition a smart contract) authorized to add and remove `Resolvers` and `Associated Addresses` from the `Identities` of users who have authorized the `Provider` to act on their behalf.
+- `Poison Pill`: In the event of irrecoverable control of an `Identity` the `Poison Pill` offers a contingency measure to "nuke" the `Identity`. This removes all `Associated Addresses` and `Providers` but preserves the `Identity` and `Resolvers`, meaning evidence of the `Identity`'s existence persists while control over the `Identity` is nullified. This allows an individual to rebuild their identity at the application level through mechanisms implemented by each `Resolver`.
 
-- `Resolver`: A smart contract containing arbitrary information pertaining to users' `Identities`. A resolver may implement an identity standard, such as ERC 725, or may consist of a smart contract leveraging or declaring identifying information about `Identities`. These could be financial dApps, social media dApps, etc.
 
 ## Specification
 A digital identity in this proposal can be viewed as an omnibus account, containing more information about an identity than any individual identity application could. This omnibus identity is resolvable to an unlimited number of sub-identities. Resolvers recognize identities by any of their associated addresses.

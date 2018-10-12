@@ -48,26 +48,18 @@ The protocol revolves around claiming an `Identity`, setting a `Provider` and ma
 ### Identity Registry
 The Identity Registry contains functionality for a user to establish their core identity and manage their `Providers`, `Associated Addresses`, and `Resolvers`. It is important to note that this registry fundamentally requires transactions for every aspect of building out a user's identity. Nonetheless, we recognize the importance of global accessibility to dApps and identity applications. Accordingly, we include the option for a delegated identity-building scheme that allows smart contracts called `Providers` to build out a user's identity through signatures without requiring users to pay gas costs.
 
-Due to the multiple addresses associated with a given identity, `Identities` are denominated by a `uint`. This `uint` can be encoded in QR format or transformed into more user-intuitive formats such as a `string`-based username in registries at the `Resolver` level. 
+Due to the multiple addresses associated with a given identity, `Identities` are denominated by a `uint`. This `uint` can be encoded in QR format or transformed into more user-intuitive formats such as a `string`-based username in registries at the `Resolver` level.
 
 ### Address Management
-The address management function consists of trustlessly connecting multiple user-owned `Associated Addresses` to a user's `Identity`. It does not prescribe any special status to any given identity-managing address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC 725 standard. This allows a user to access common identity data from multiple wallets while still
-- retaining flexibility to interact with contracts outside of their core identity pseudonymously
+The address management function consists of trustlessly connecting multiple user-owned `Associated Addresses` to a user's `Identity`. It does not prescribe any special status to any given `Associated Address` address, rather leaving this specification to identity applications built on top of the protocol - for instance, `management`, `action`, `claim` and `encryption` keys denominated in the ERC 725 standard or `Identifiers` and `delegates` as denominated in ERC1056. This allows a user to access common identity data from multiple wallets while still:
+- retaining flexibility to interact with contracts outside of their identity pseudonymously
 - taking advantage of address-specific permissions established at the application layer of a user's identity.
 
 Trustlessness in the address management function is achieved through a signature and verification scheme that requires two signatures - one from an address already within the registry and one from the address to be claimed. Importantly, the transaction need not come from the original user, which allows entities, governments, etc to bear the overhead of creating a core identity. To prevent a compromised `Associated Address` from unilaterally removing other `Associated Addresses`, removal of an `Associated Address` also requires a signature from the address to be removed.
 
-`initiateClaim`: `hash(addressToClaim, secret, coreID)`
-
-`delegatedInitiateClaim`: `hash(signature, addressToClaim, secret, coreID)`
-
-`finalizeClaim`: transact with `secret` and `Identity`
-
-`removeAddress`: transact from a claimed address with `addressToRemove`
-
 
 ### Resolver Management
-The resolver management function is similarly low-level. It considers a resolver to be any smart contract that encodes information which resolves to a user's core identity. It does not set a standard for specific information that can be encoded in a resolver, rather remaining agnostic to the nature of information itself.
+The resolver management function is similarly low-level. It considers a resolver to be any smart contract that encodes information which resolves to a user's core identity. It does not set a standard for specific information that can be encoded in a `Resolver`, rather remaining agnostic to the nature of information itself.
 
 `setResolver`: transact with `resolverAddress`
 
@@ -75,7 +67,7 @@ The resolver management function is similarly low-level. It considers a resolver
 
 `removeResolver`: transact with `resolverAddress`
 
-The resolver standard is primarily what makes this ERC an identity protocol rather than an identity application. `Resolvers` resolve data about an atomic entity, the `Identity`, in the form of arbitrarily complex smart contracts rather than a pre-defined attestation structure.
+The resolver standard is primarily what makes this ERC an identity *protocol* rather than an identity *application*. `Resolvers` resolve abstract data in smart contracts to an atomic entity, the `Identity`.
 
 ### Provider Management
 While the protocol allows for users to directly call identity management functions, it also aims to be more robust and future-proof by allowing arbitrary smart contracts to perform identity management functions on a user's behalf. A provider set by an individual can perform address management and resolver management functions by passing the user's `Identity` in function calls.
@@ -88,13 +80,13 @@ The specification introduces a `Recovery Address` to account for instances of lo
 **Changing Recovery Key**: If a recovery key is lost, a provider can `initiateRecoveryAddressChange` with a signature from any claimed address. To prevent malicious change of a `Recovery Address` from someone who has gained control of an `Associated Address`, this occurs over a 14 day challenge period during which the `Recovery Address` may reject the change. If the `Recovery Address` does not reject the change within 14 days, the `Recovery Address` is changed. However, during the fourteen day period, the `Recovery Address` can dispute the change request by calling `triggerRecovery` in which case all `Associated Addresses` are removed, and an Address delegated in the `triggerRecovery` call becomes the only `Associated Address` for the `Identity`.
 
 **Poison Pill**
-The Recovery scheme offers a lot of power to a `Recovery Address`; accordingly, `triggerPoisonPill` is a nuclear option to combat malicious control over an `Identity` when a `Recovery Address` is compromised. If a malicious actor compromises a user's `RecoveryAddress` and calls `triggerRecovery`, any address removed in the `Recovery` process can `triggerPoisonPill` within 7 days to nuke the `Identity`. The user would then need to create a new `Identity` and would be responsible for engaging in recovery schemes for any Identity Applications built in the application layer.
+The Recovery scheme offers considerable power to a `Recovery Address`; accordingly, `triggerPoisonPill` is a nuclear option to combat malicious control over an `Identity` when a `Recovery Address` is compromised. If a malicious actor compromises a user's `RecoveryAddress` and calls `triggerRecovery`, any address removed in the `Recovery` process can `triggerPoisonPill` within 7 days to nuke the `Identity`. The user would then need to create a new `Identity` and would be responsible for engaging in recovery schemes for any Identity Applications built in the application layer.
 
 #### Alternative Recovery Considerations
 In devising the Recovery process outlined in this specification, we considered many Recovery options. We ultimately selected the scheme that was most unopinionated and modular to be consistent with the the `Resolver`, `Associated Address` and `Provider` components within the specification. Still, we feel it important to highlight some of the other recovery options considered to provide deeper rationale as to why we arrived at the above scheme.
 
 **High Level Concerns**
-Fundamentally, a Recovery scheme needed to be resilient to a compromised `Associated Address` taking control of a user's `Identity`. A secondary concern was preventing an `Associated Address` from maliciously destroying a user's identity due to off-chain utility, which is not an optimal scenario, but is strictly better than if they've gained control.  
+Fundamentally, a Recovery scheme needed to be resilient to a compromised address taking control of a user's `Identity`. A secondary concern was preventing a compromised address from maliciously destroying a user's identity due to off-chain utility, which is not an optimal scenario, but is strictly better than if they've gained control.  
 
 **Nuclear Option**
 This approach would allow any `Associated Address` to destroy an `Identity` whenever another `Associated Address` is compromised. While this may seem harsh, we held it in strong consideration due to the fact that ERC[TBD] is a protocol rather than an Identity *application*. Accordingly, once a user destroyed their compromised `Identity`, they would need to use whatever Restoration mechanisms were apparent in each of their actual identities. We ultimately dismissed this approach for two main reasons.
@@ -114,14 +106,12 @@ The main criticism of an identity layer comes from restrictiveness; we aim to li
 
 ## Implementation
 
-### Functions
-
 #### identityExists
 
 Returns a `bool` indicating whether or not an `Identity` denominated by the passed `identity` string exists.
 
 ```solidity
-function identityExists(uint identity) public view returns (bool);
+function identityExists(string identity) public view returns (bool);
 ```
 
 #### hasIdentity
@@ -137,7 +127,7 @@ function hasIdentity(address _address) public view returns (bool);
 Returns the `identity` associated with the passed `_address`. Throws if no such `identity` exists.
 
 ```solidity
-function getIdentity(address _address) public view returns (uint identity);
+function getIdentity(address _address) public view returns (string identity);
 ```
 
 #### isProviderFor
@@ -145,7 +135,7 @@ function getIdentity(address _address) public view returns (uint identity);
 Returns a `bool` indicating whether or not the passed `provider` is assigned to the passed `identity`.
 
 ```solidity
-function isProviderFor(uint identity, address provider) public view returns (bool);
+function isProviderFor(string identity, address provider) public view returns (bool);
 ```
 
 #### isResolverFor
@@ -153,7 +143,7 @@ function isProviderFor(uint identity, address provider) public view returns (boo
 Returns a `bool` indicating whether or not the passed `resolver` is assigned to the passed `identity`.
 
 ```solidity
-function isResolverFor(uint identity, address resolver) public view returns (bool);
+function isResolverFor(string identity, address resolver) public view returns (bool);
 ```
 
 #### isAddressFor
@@ -161,7 +151,7 @@ function isResolverFor(uint identity, address resolver) public view returns (boo
 Returns a `bool` indicating whether or not the passed `_address` is owned by the passed `identity`.
 
 ```solidity
-function isAddressFor(uint identity, address _address) public view returns (bool);
+function isAddressFor(string identity, address _address) public view returns (bool);
 ```
 
 #### getDetails
@@ -169,7 +159,7 @@ function isAddressFor(uint identity, address _address) public view returns (bool
 Returns three `address` arrays of `associatedAddresses`, `providers` and `resolvers`. All of these arrays represent the addresses associated with the passed `identity`.
 
 ```solidity
-function getDetails(uint identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
+function getDetails(string identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
 ```
 
 #### mintIdentity
@@ -177,20 +167,16 @@ function getDetails(uint identity) public view returns (address[] associatedAddr
 Mints an `Identity` with the passed `identity` and `provider`.
 
 ```solidity
-function mintIdentity(uint identity, address provider) public;
+function mintIdentity(string identity, address provider) public;
 ```
-
-Triggers event: [IdentityMinted](#identityminted)
 
 #### mintIdentityDelegated
 
 Preforms the same logic as `mintIdentity`, but can be called by a `provider`. This function requires a signature for the `associatedAddress` to confirm their consent.
 
 ```solidity
-function mintIdentityDelegated(uint identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
+function mintIdentityDelegated(string identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
 ```
-
-Triggers event: [IdentityMinted](#identityminted)
 
 #### addProviders
 
@@ -200,8 +186,6 @@ Adds an array of `providers` to the `Identity` of the `msg.sender`.
 function addProviders(address[] providers) public;
 ```
 
-Triggers event: [ProviderAdded](#provideradded)
-
 #### removeProviders
 
 Removes an array of `providers` from the `Identity` of the `msg.sender`.
@@ -210,187 +194,49 @@ Removes an array of `providers` from the `Identity` of the `msg.sender`.
 function removeProviders(address[] providers) public;
 ```
 
-Triggers event: [ProviderRemoved](#providerremoved)
-
-#### removeProviders
-
-Removes an array of `providers` from the `Identity` of the `identity` passed.
-
-```solidity
-function removeProviders(uint identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt) public;
-```
-
-Triggers event: [ProviderRemoved](#providerremoved)
-
 #### addResolvers
 
 Adds an array of `resolvers` to the passed `identity`. This must be called by a `provider`.
 
 ```solidity
-function addResolvers(uint identity, address[] resolvers) public;
+function addResolvers(string identity, address[] resolvers) public;
 ```
-
-Triggers event: [ResolverAdded](#resolveradded)
 
 #### removeResolvers
 
 Removes an array of `resolvers` from the passed `identity`. This must be called by a `provider`.
 
 ```solidity
-function removeResolvers(uint identity, address[] resolvers) public;
+function removeResolvers(string identity, address[] resolvers) public;
 ```
-
-Triggers event: [ResolverRemoved](#resolverremoved)
 
 #### addAddress
 
 Adds the `addressToAdd` to the passed `identity`. Requires signatures from both the `addressToAdd` and the `approvingAddress`.
 
 ```solidity
-function addAddress(uint identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
+function addAddress(string identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
 ```
-
-Triggers event: [AddressAdded](#addressadded)
 
 #### removeAddress
 
 Removes an `addressToRemove` from the passed `identity`. Requires a signature from the `addressToRemove`.
 
 ```solidity
-function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 ```
 
-Triggers event: [AddressRemoved](#addressremoved)
-
-#### initiateRecoveryAddressChange
-
-Initiates a change in the current `recoveryAddress` for a given `identity`.
-
-```solidity
-function initiateRecoveryAddressChange(uint identity, address newRecoveryAddress) public;
-```
-
-Triggers event: [RecoveryAddressChangeInitiated](#recoveryaddresschangeinitiated)
-
-#### triggerRecovery
-
-Initiates `identity` recovery from the current `recoveryAddress`.
-
-```solidity
-function triggerRecovery(uint identity, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s) public;
-```
-
-Triggers event: [RecoveryTriggered](#recoverytriggered)
-
-#### triggerPoisonPill
-
-Initiates the `poison pill` on an `identity`. This will render the `identity` unusable.
-
-```solidity
-function triggerPoisonPill(uint identity, address[] firstChunk, address[] lastChunk, bool clearResolvers) public;
-```
-
-Triggers event: [Poisoned](#poisoned)
-
-### Events
-
-#### IdentityMinted
-
-MUST be triggered when an identity is minted.
-
-```solidity
-event IdentityMinted(uint identity, address associatedAddress, address provider, bool delegated);
-```
-
-#### AddressAdded
-
-MUST be triggered when an address is added to an identity.
-
-```solidity
-event AddressAdded(uint indexed identity, address addedAddress, address approvingAddress, address provider);
-```
-
-#### AddressRemoved
-
-MUST be triggered when an address is removed from an identity.
-
-```solidity
-event AddressRemoved(uint indexed identity, address removedAddress, address provider);
-```
-
-#### ProviderAdded
-
-MUST be triggered when a provider is added to an identity.
-
-```solidity
-event ProviderAdded(uint indexed identity, address provider, bool delegated);
-```
-
-#### ProviderRemoved
-
-MUST be triggered when a provider is removed.
-
-```solidity
-emit ProviderRemoved(identity, providers[i], delegated);
-```
-
-#### ResolverAdded
-
-MUST be triggered when a resolver is added.
-
-```solidity
-event ResolverAdded(uint indexed identity, address resolvers, address provider);
-```
-
-#### ResolverRemoved
-
-MUST be triggered when a resolver is removed.
-
-```solidity
-event ResolverRemoved(uint indexed identity, address resolvers, address provider);
-```
-
-#### RecoveryAddressChangeInitiated
-
-MUST be triggered when a recovery address change is initiated.
-
-```solidity
-event RecoveryAddressChangeInitiated(uint indexed identity, address oldRecoveryAddress, address newRecoveryAddress);
-```
-
-#### RecoveryTriggered
-
-MUST be triggered when recovery is initiated.
-
-```solidity
-event RecoveryTriggered(uint indexed identity, address recoveryAddress, address[] oldAssociatedAddress, address newAssociatedAddress);
-```
-
-#### Poisoned
-
-MUST be triggered when an identity is poisoned.
-
-```solidity
-event Poisoned(uint indexed identity, address poisoner, bool resolversCleared);
-```
-
-
-### Solidity Interface
+#### Solidity Interface
 ```solidity
 pragma solidity ^0.4.24;
 
 contract ERCTBD {
 
-  event IdentityMinted(uint identity, address associatedAddress, address provider, bool delegated);
-  event AddressAdded(uint indexed identity, address addedAddress, address approvingAddress, address provider);
-  event AddressRemoved(uint indexed identity, address removedAddress, address provider);
-  event ProviderAdded(uint indexed identity, address provider, bool delegated);
-  event ProviderRemoved(uint indexed identity, address provider, bool delegated);
-  event ResolverAdded(uint indexed identity, address resolvers, address provider);
-  event ResolverRemoved(uint indexed identity, address resolvers, address provider);
-  event RecoveryAddressChangeInitiated(uint indexed identity, address oldRecoveryAddress, address newRecoveryAddress);
-  event RecoveryTriggered(uint indexed identity, address recoveryAddress, address[] oldAssociatedAddress, address newAssociatedAddress);
-  event Poisoned(uint indexed identity, address poisoner, bool resolversCleared);
+  event IdentityMinted(string identity, address associatedAddress, address provider, bool delegated);
+  event ResolverAdded(string identity, address resolvers, address provider);
+  event ResolverRemoved(string identity, address resolvers, address provider);
+  event AddressAdded(string identity, address addedAddress, address approvingAddress, address provider);
+  event AddressRemoved(string identity, address removedAddress, address provider);
 
   struct Identity {
     AddressSet.Set associatedAddresses;
@@ -398,33 +244,28 @@ contract ERCTBD {
     AddressSet.Set resolvers;
   }
 
-  function identityExists(uint identity) public view returns (bool);
+  function identityExists(string identity) public view returns (bool);
 
   function hasIdentity(address _address) public view returns (bool);
-  function getIdentity(address _address) public view returns (uint identity);
+  function getIdentity(address _address) public view returns (string identity);
 
-  function isProviderFor(uint identity, address provider) public view returns (bool);
-  function isResolverFor(uint identity, address resolver) public view returns (bool);
-  function isAddressFor(uint identity, address _address) public view returns (bool);
+  function isProviderFor(string identity, address provider) public view returns (bool);
+  function isResolverFor(string identity, address resolver) public view returns (bool);
+  function isAddressFor(string identity, address _address) public view returns (bool);
 
-  function getDetails(uint identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
+  function getDetails(string identity) public view returns (address[] associatedAddresses, address[] providers, address[] resolvers);
 
-  function mintIdentity(uint identity, address provider) public;
-  function mintIdentityDelegated(uint identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
+  function mintIdentity(string identity, address provider) public;
+  function mintIdentityDelegated(string identity, address associatedAddress, uint8 v, bytes32 r, bytes32 s) public;
 
   function addProviders(address[] providers) public;
   function removeProviders(address[] providers) public;
-  function removeProviders(uint identity, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 
-  function addResolvers(uint identity, address[] resolvers) public;
-  function removeResolvers(uint identity, address[] resolvers) public;
+  function addResolvers(string identity, address[] resolvers) public;
+  function removeResolvers(string identity, address[] resolvers) public;
 
-  function addAddress(uint identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
-  function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
-
-  function initiateRecoveryAddressChange(uint identity, address newRecoveryAddress) public;
-  function triggerRecovery(uint identity, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s) public;
-  function triggerPoisonPill(uint identity, address[] firstChunk, address[] lastChunk, bool clearResolvers) public;
+  function addAddress(string identity, address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
+  function removeAddress(string identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
 }
 ```
 ## Backwards Compatibility

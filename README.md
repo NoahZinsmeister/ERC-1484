@@ -1,6 +1,10 @@
 ## ERC xxx Reference Implementation and Examples
 
-This repo contains the reference implementation for ERC xxx. It also contains a test suite, as well as examples of smart contracts that leverage the Identity Registry.
+This repo contains the reference implementation for ERC xxx. The text of the ERC is in [ERC.md](./ERC.md).
+
+It also contains a test suite, as well as examples of smart contracts that leverage the protocol defined in the ERC.
+
+This ERC is currently being tracked at [PR 1484](https://github.com/ethereum/EIPs/pull/1484) in [ethereum/EIPs](https://github.com/ethereum/EIPs).
 
 ## To Run Locally
 - Install dependencies: `npm install`

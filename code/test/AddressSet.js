@@ -1,14 +1,12 @@
 const AddressSetTesting = artifacts.require('./testing/AddressSetTesting.sol')
 
-let allAccounts
-let setInstance
 async function verify (expectedLength, expectedMembers) {
   // check length
   const length = await setInstance.length.call()
   assert.equal(length, expectedLength, 'Set has unexpected length')
   // check membership
   const members = await setInstance.members.call()
-  assert.deepEqual(members.sort(), expectedMembers.sort(), 'Set has unexpected members')
+  assert.deepEqual([...members].sort(), [...expectedMembers].sort(), 'Set has unexpected members')
   // check contains
   await Promise.all(allAccounts.map(async member => {
     const contains = await setInstance.contains.call(member)
@@ -31,6 +29,9 @@ async function remove (accounts) {
     await setInstance.remove(account)
   }
 }
+
+let allAccounts
+let setInstance
 
 contract('Testing AddressSet', function (accounts) {
   allAccounts = accounts

@@ -2,8 +2,7 @@ pragma solidity ^0.4.24;
 
 import "./zeppelin/ownership/Ownable.sol";
 import "./zeppelin/math/SafeMath.sol";
-import "./AddressSet/addressSet.sol";
-import "../Provider.sol";
+import "../AddressSet/AddressSet.sol";
 
 interface ERC20 {
     function transfer(address to, uint256 value) external returns (bool);
@@ -24,23 +23,24 @@ interface ViaContract {
 
 contract IdentityRegistry {
     function mintIdentityDelegated(uint identity, address identityAddress, uint8 v, bytes32 r, bytes32 s) public;
-    function identityExists(uint identity) public view returns (bool);
-    function getIdentity(address _address) public view returns (uint identity);
-    function hasIdentity(address _address) public view returns (bool);
+    function identityExists(uint identity) public returns (bool);
+    function getIdentity(address _address) public returns (uint identity);
+    function hasIdentity(address _address) public returns (bool);
     function addResolvers(uint identity, address[] resolvers) public;
     function removeResolvers(uint identity, address[] resolvers) public;
-    function isResolverFor(uint identity, address resolver) public view returns (bool);
+    function isResolverFor(uint identity, address resolver) public returns (bool);
     function addAddress(
         uint identity,
         address approvingAddress,
         address addressToAdd,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) public;
     function removeAddress(uint identity, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) public;
+    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s) public returns (bool);
 }
 
 contract Snowflake is Ownable {
     using SafeMath for uint;
-    using addressSet for addressSet._addressSet;
+    using AddressSet for AddressSet.Set;
 
     // hydro token wrapper variable
     mapping (string => uint) internal deposits;
@@ -58,7 +58,7 @@ contract Snowflake is Ownable {
     address public clientRaindropAddress;
     address public hydroTokenAddress;
 
-    addressSet._addressSet resolverWhitelist;
+    AddressSet.Set resolverWhitelist;
 
     IdentityRegistry registry;
 
@@ -76,10 +76,6 @@ contract Snowflake is Ownable {
     modifier _hasToken(address _address, bool check) {
         require(hasToken(_address) == check, "The transaction sender does not have an Identity token.");
         _;
-    }
-
-    function stringsEqual(string memory first, string memory second) public pure returns (bool) {
-        return keccak256(abi.encodePacked(first)) == keccak256(abi.encodePacked(second));
     }
 
     // set the signature timeout
@@ -106,7 +102,7 @@ contract Snowflake is Ownable {
         address _address, address[] resolvers, uint[] withdrawAllowances, uint8 v, bytes32 r, bytes32 s, uint timestamp
     ) public
     {
-        string memory identity = registry.getIdentity(_address);
+        uint identity = registry.getIdentity(_address);
         require(registry.identityExists(identity), "Must initiate claim for a valid identity");
         // solium-disable-next-line security/no-block-members
         require(timestamp.add(signatureTimeout) > block.timestamp, "Message was signed too long ago.");
@@ -146,7 +142,7 @@ contract Snowflake is Ownable {
     }
 
     function removeResolvers(address[] resolvers, bool force) public _hasToken(msg.sender, true) {
-        string memory identity = registry.getIdentity(msg.sender)
+        uint identity = registry.getIdentity(msg.sender);
 
         for (uint i; i < resolvers.length; i++) {
             require(registry.isResolverFor(identity, resolvers[i]), "Snowflake has not set this resolver.");
@@ -177,7 +173,7 @@ contract Snowflake is Ownable {
         address _address, address[] resolvers, uint[] withdrawAllowances, uint8 v, bytes32 r, bytes32 s, uint timestamp
     ) public
     {
-        string memory identity = registry.getIdentity(_address);
+        uint identity = registry.getIdentity(_address);
         require(registry.identityExists(identity), "Must add Resolver for a valid identity");
 
         bytes32 _hash = keccak256(
@@ -238,7 +234,7 @@ contract Snowflake is Ownable {
         ERC20 hydro = ERC20(_tokenAddress);
         require(hydro.transferFrom(sender, address(this), amount), "Unable to transfer token ownership.");
 
-        string memory recipientIdentity = registry.getIdentity(recipient);
+        uint recipientIdentity = registry.getIdentity(recipient);
         deposits[recipientIdentity] = deposits[recipientIdentity].add(amount);
 
         emit SnowflakeDeposit(recipientIdentity, sender, amount);
@@ -272,7 +268,7 @@ contract Snowflake is Ownable {
 
     // allows resolvers to send withdrawal amounts to arbitrary smart contracts 'to' identitys (throws if unsuccessful)
     function withdrawSnowflakeBalanceFromVia(
-        uint identityFrom, address via, uint identityFrom, uint amount, bytes _bytes
+        uint identityFrom, address via, uint identityTo, uint amount, bytes _bytes
     ) public {
         handleAllowance(identityFrom, amount);
         _withdraw(identityFrom, via, amount);

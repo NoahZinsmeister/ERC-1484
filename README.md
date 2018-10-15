@@ -1,10 +1,12 @@
-## ERC xxx Reference Implementation and Examples
+## ERC-1484 Reference Implementation and Examples
 
-This repo contains the reference implementation for ERC xxx. The text of the ERC is in [ERC.md](./ERC.md).
+This repo contains the reference implementation for ERC-1484. The text of the ERC can be found in [eip-1484.md](./eip-1484.md).
 
 It also contains a test suite, as well as examples of smart contracts that leverage the protocol defined in the ERC.
 
-This ERC is currently being tracked at [PR 1484](https://github.com/ethereum/EIPs/pull/1484) in [ethereum/EIPs](https://github.com/ethereum/EIPs).
+This ERC is currently being tracked at PR [#1484](https://github.com/ethereum/EIPs/pull/1484) in [ethereum/EIPs](https://github.com/ethereum/EIPs).
+
+Any and all feedback should occur in [the official discussion forum for this ERC](https://github.com/ethereum/EIPs/issues/1495).
 
 ## To Run Locally
 - Install dependencies: `npm install`

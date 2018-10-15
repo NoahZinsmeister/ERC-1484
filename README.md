@@ -11,7 +11,8 @@ Any and all feedback should occur in [the official discussion forum for this ERC
 ## To Run Locally
 - Install dependencies: `npm install`
 - Build contracts: `npm run build`
+- Address Truffle bug: `touch contracts/IdentityRegistry.sol`
 - In one terminal tab, spin up a development blockchain: `npm run chain`
 - In another terminal tab, run the test suite: `npm test`
 
-NOTE: Due to a bug in Truffle, tests will fail with a `Deployer._preFlightCheck` error after running `npm run build`. This problem can be solved by saving one or more contract files after building, so that the test command triggers a re-compile before running. While slightly frustrating, adding then removing whitespace then saving one file is an easy fix to this bug.
+NOTE: Due to [a bug in Truffle](https://github.com/trufflesuite/truffle/issues/1341), tests will fail with a `Deployer._preFlightCheck` error after running `npm run build`. This problem can be solved by saving one or more contract files after building, so that the test command triggers a re-compile before running. While slightly frustrating, running `touch contracts/IdentityRegistry.sol` (or adding then removing whitespace to `contracts/IdentityRegistry.sol` then saving) after building is an easy fix to this bug.

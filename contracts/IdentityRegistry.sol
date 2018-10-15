@@ -130,8 +130,7 @@ contract IdentityRegistry is SignatureVerifier {
 
     // checks whether or not a passed timestamp is within/not within the timeout period
     function isTimedOut(uint timestamp) private view returns (bool) {
-        // solium-disable-next-line security/no-block-members
-        return block.timestamp > timestamp + recoveryTimeout;
+        return block.timestamp > timestamp + recoveryTimeout; // solium-disable-line security/no-block-members
     }
 
 
@@ -345,8 +344,7 @@ contract IdentityRegistry is SignatureVerifier {
         // log the old recovery address
         Identity storage _identity = identityDirectory[ein];
         address oldRecoveryAddress = _identity.recoveryAddress;
-        // solium-disable-next-line security/no-block-members
-        log.timestamp = block.timestamp;
+        log.timestamp = block.timestamp; // solium-disable-line security/no-block-members
         log.oldRecoveryAddress = oldRecoveryAddress;
 
         // make the change
@@ -386,21 +384,23 @@ contract IdentityRegistry is SignatureVerifier {
             "Permission denied."
         );
 
+        emit RecoveryTriggered(
+            ein, msg.sender, _identity.associatedAddresses.members, _identity.providers.members, newAssociatedAddress
+        );
+
         // log the old associated addresses to unlock the poison pill
-        address[] memory oldAssociatedAddresses = _identity.associatedAddresses.members;
-        // solium-disable-next-line security/no-block-members
-        recoveredChange.timestamp = block.timestamp;
-        recoveredChange.hashedOldAssociatedAddresses = keccak256(abi.encodePacked(oldAssociatedAddresses));
+        recoveredChange.timestamp = block.timestamp; // solium-disable-line security/no-block-members
+        recoveredChange.hashedOldAssociatedAddresses = keccak256(
+            abi.encodePacked(
+                _identity.associatedAddresses.members
+            )
+        );
 
         // remove identity data, and add the new address as the sole associated address
         clearAllIdentityData(_identity, false);
+        _identity.recoveryAddress = msg.sender;
         _identity.associatedAddresses.insert(newAssociatedAddress);
         associatedAddressDirectory[newAssociatedAddress] = ein;
-
-        // set the msg.sender to the recovery address
-        _identity.recoveryAddress = msg.sender;
-
-        emit RecoveryTriggered(ein, msg.sender, oldAssociatedAddresses, newAssociatedAddress);
     }
 
     // allows addresses recently removed by recovery to permanently disable the identity they were removed from
@@ -417,11 +417,19 @@ contract IdentityRegistry is SignatureVerifier {
             "Cannot activate the poison pill from an address that was not recently removed via recover."
         );
 
+        emit Poisoned(
+            ein,
+            _identity.recoveryAddress,
+            _identity.associatedAddresses.members,
+            _identity.providers.members,
+            _identity.resolvers.members,
+            msg.sender,
+            clearResolvers
+        );
+
         // poison the identity
         Identity storage _identity = identityDirectory[ein];
         clearAllIdentityData(_identity, clearResolvers);
-
-        emit Poisoned(ein, msg.sender, clearResolvers);
     }
 
     // removes all associated addresses, providers, and optionally resolvers from an identity
@@ -453,7 +461,19 @@ contract IdentityRegistry is SignatureVerifier {
     event ResolverRemoved(uint indexed ein, address resolvers, address provider);
     event RecoveryAddressChangeInitiated(uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress);
     event RecoveryTriggered(
-        uint indexed ein, address recoveryAddress, address[] oldAssociatedAddresses, address newAssociatedAddress
+        uint indexed ein,
+        address recoveryAddress,
+        address[] oldAssociatedAddresses,
+        address[] oldProviders,
+        address newAssociatedAddress
     );
-    event Poisoned(uint indexed ein, address poisoner, bool resolversCleared);
+    event Poisoned(
+        uint indexed ein,
+        address recoveryAddress,
+        address[] oldAssociatedAddresses,
+        address[] oldProviders,
+        address[] oldResolvers,
+        address poisoner,
+        bool resolversCleared
+    );
 }

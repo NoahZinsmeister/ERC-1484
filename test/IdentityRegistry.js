@@ -1,80 +1,9 @@
 const Web3 = require('web3')
-const ethUtil = require('ethereumjs-util')
 const web3 = new Web3(Web3.givenProvider)
 
+const { sign, verifyIdentity, timeTravel } = require('./common')
+
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
-
-function sign (messageHash, address, privateKey, method) {
-  return new Promise(resolve => {
-    if (method === 'unprefixed') {
-      let signature = ethUtil.ecsign(
-        Buffer.from(ethUtil.stripHexPrefix(messageHash), 'hex'),
-        Buffer.from(ethUtil.stripHexPrefix(privateKey), 'hex')
-      )
-      signature.r = ethUtil.bufferToHex(signature.r)
-      signature.s = ethUtil.bufferToHex(signature.s)
-      signature.v = parseInt(ethUtil.bufferToHex(signature.v))
-      resolve(signature)
-    } else {
-      web3.eth.sign(messageHash, address)
-        .then(concatenatedSignature => {
-          let strippedSignature = ethUtil.stripHexPrefix(concatenatedSignature)
-          let signature = {
-            r: ethUtil.addHexPrefix(strippedSignature.substr(0, 64)),
-            s: ethUtil.addHexPrefix(strippedSignature.substr(64, 64)),
-            v: parseInt(ethUtil.addHexPrefix(strippedSignature.substr(128, 2))) + 27
-          }
-          resolve(signature)
-        })
-    }
-  })
-}
-
-function timeTravel (seconds) {
-  return new Promise((resolve, reject) => {
-    web3.currentProvider.send({
-      jsonrpc: '2.0',
-      method: 'evm_increaseTime',
-      params: [seconds],
-      id: new Date().getTime()
-    }, (err, result) => {
-      if (err) return reject(err)
-      return resolve(result)
-    })
-  })
-}
-
-async function verifyIdentity (identity, expectedDetails) {
-  const identityExists = await instances.IdentityRegistry.identityExists(identity)
-  assert.isTrue(identityExists, "identity unexpectedly does/doesn't exist.")
-
-  for (const address of expectedDetails.associatedAddresses) {
-    const hasIdentity = await instances.IdentityRegistry.hasIdentity(address)
-    assert.isTrue(hasIdentity, "address unexpectedly does/doesn't have an identity.")
-
-    const onChainIdentity = await instances.IdentityRegistry.getEIN(address)
-    assert.isTrue(onChainIdentity.eq(identity), 'on chain identity was set incorrectly.')
-
-    const isAddressFor = await instances.IdentityRegistry.isAddressFor(identity, address)
-    assert.isTrue(isAddressFor, 'associated address was set incorrectly.')
-  }
-
-  for (const provider of expectedDetails.providers) {
-    const isProviderFor = await instances.IdentityRegistry.isProviderFor(identity, provider)
-    assert.isTrue(isProviderFor, 'provider was set incorrectly.')
-  }
-
-  for (const resolver of expectedDetails.resolvers) {
-    const isResolverFor = await instances.IdentityRegistry.isResolverFor(identity, resolver)
-    assert.isTrue(isResolverFor, 'associated resolver was set incorrectly.')
-  }
-
-  const details = await instances.IdentityRegistry.getDetails(identity)
-  assert.equal(details.recoveryAddress, expectedDetails.recoveryAddress, 'unexpected recovery address.')
-  assert.deepEqual(details.associatedAddresses, expectedDetails.associatedAddresses, 'unexpected associated addresses.')
-  assert.deepEqual(details.providers, expectedDetails.providers, 'unexpected providers.')
-  assert.deepEqual(details.resolvers, expectedDetails.resolvers, 'unexpected resolvers.')
-}
 
 const privateKeys = [
   '0x2665671af93f210ddb5d5ffa16c77fcf961d52796f2b2d7afd32cc5d886350a8',
@@ -92,7 +21,6 @@ const privateKeys = [
 // convenience variables
 const instances = {}
 let accountsPrivate
-let identities
 let identity
 let oldAssociatedAddresses
 let newRecoveryAddress
@@ -100,12 +28,12 @@ let newRecoveryAddress
 contract('Testing Identity', function (accounts) {
   accountsPrivate = accounts.map((account, i) => { return { address: account, privateKey: privateKeys[i] } })
 
-  identities = [{
+  identity = {
     recoveryAddress:     accountsPrivate[0],
     associatedAddresses: accountsPrivate.slice(1, 4),
     providers:           accountsPrivate.slice(4, 5),
     resolvers:           []
-  }]
+  }
 
   describe('Deploying Contracts', function () {
     it('IdentityRegistry contract deployed', async function () {
@@ -128,8 +56,6 @@ contract('Testing Identity', function (accounts) {
     })
 
     it('Identity can be minted', async function () {
-      identity = identities[0]
-
       // test user minting
       const mintedIdentity = await instances.IdentityRegistry.mintIdentity.call(
         identity.recoveryAddress.address, identity.providers[0].address, [],
@@ -163,9 +89,9 @@ contract('Testing Identity', function (accounts) {
         { from: identity.associatedAddresses[0].address }
       )
 
-      identities[0].identity = web3.utils.toBN(1)
+      identity.identity = web3.utils.toBN(1)
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(address => address.address).slice(0, 1),
         providers:           identity.providers.map(provider => provider.address),
@@ -210,7 +136,7 @@ contract('Testing Identity', function (accounts) {
             .concat(address.address)
         }
 
-        await verifyIdentity(identity.identity, {
+        await verifyIdentity(identity.identity, instances.IdentityRegistry, {
           recoveryAddress:     identity.recoveryAddress.address,
           associatedAddresses: associatedAddresses,
           providers:           identity.providers.map(provider => provider.address),
@@ -239,7 +165,7 @@ contract('Testing Identity', function (accounts) {
         { from: identity.providers[0].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(address => address.address),
         providers:           identity.providers.map(provider => provider.address),
@@ -275,7 +201,7 @@ contract('Testing Identity', function (accounts) {
         { from: identity.providers[0].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(address => address.address),
         providers:           identity.providers.map(provider => provider.address).concat(provider.address),
@@ -311,7 +237,7 @@ contract('Testing Identity', function (accounts) {
         { from: identity.providers[0].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress: identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(address => address.address),
         providers: identity.providers.map(provider => provider.address),
@@ -328,7 +254,7 @@ contract('Testing Identity', function (accounts) {
         { from: identity.providers[0].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress: identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(address => address.address),
         providers: identity.providers.map(provider => provider.address),
@@ -345,7 +271,7 @@ contract('Testing Identity', function (accounts) {
         { from: identity.providers[0].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress: identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(address => address.address),
         providers: identity.providers.map(provider => provider.address),
@@ -362,7 +288,7 @@ contract('Testing Identity', function (accounts) {
         identity.identity, newRecoveryAddress.address, { from: identity.providers[0].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     newRecoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(associatedAddress => associatedAddress.address),
         providers:           identity.providers.map(provider => provider.address),
@@ -420,7 +346,7 @@ contract('Testing Identity', function (accounts) {
         identity.identity, identity.recoveryAddress.address, { from: identity.providers[0].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(associatedAddress => associatedAddress.address),
         providers:           identity.providers.map(provider => provider.address),
@@ -441,7 +367,7 @@ contract('Testing Identity', function (accounts) {
         { from: newRecoveryAddress.address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     newRecoveryAddress.address,
         associatedAddresses: [newAssociatedAddress.address],
         providers:           [],
@@ -474,7 +400,7 @@ contract('Testing Identity', function (accounts) {
         identity.identity, firstChunk, lastChunk, true, { from: identity.associatedAddresses[1].address }
       )
 
-      await verifyIdentity(identity.identity, {
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     newRecoveryAddress.address,
         associatedAddresses: [],
         providers:           [],

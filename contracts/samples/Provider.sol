@@ -28,7 +28,7 @@ interface IdentityRegistry {
     function initiateRecoveryAddressChange(uint ein, address newRecoveryAddress) external;
 }
 
-contract ProviderSample {
+contract Provider {
     IdentityRegistry identityRegistry;
 
     constructor (address identityRegistryAddress) public {

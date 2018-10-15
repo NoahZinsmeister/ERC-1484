@@ -1,4 +1,4 @@
-const AddressSetSample = artifacts.require('./testing/AddressSetSample.sol')
+const AddressSetTest = artifacts.require('./testing/AddressSetTest.sol')
 
 async function verify (expectedLength, expectedMembers) {
   // check length
@@ -37,7 +37,7 @@ contract('Testing AddressSet', function (accounts) {
   allAccounts = accounts
 
   it('Testing contract deployed', async function () {
-    setInstance = await AddressSetSample.new()
+    setInstance = await AddressSetTest.new()
   })
 
   it('Set initialized correctly', async function () {
@@ -64,8 +64,8 @@ contract('Testing AddressSet', function (accounts) {
     await verify(accounts.length, accounts)
   })
 
-  it('Other members removed correctly', async function () {
-    await remove(accounts)
+  it('Set reset correctly', async function () {
+    await setInstance.reset()
     await verify(0, [])
   })
 })

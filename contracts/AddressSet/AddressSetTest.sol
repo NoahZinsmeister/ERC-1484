@@ -3,7 +3,7 @@ pragma solidity ^0.4.24;
 import "../AddressSet/AddressSet.sol";
 
 
-contract AddressSetSample {
+contract AddressSetTest {
     using AddressSet for AddressSet.Set;
 
     AddressSet.Set internal mySet;
@@ -26,5 +26,9 @@ contract AddressSetSample {
 
     function members() public view returns (address[]) {
         return mySet.members;
+    }
+
+    function reset() public {
+        delete mySet;
     }
 }

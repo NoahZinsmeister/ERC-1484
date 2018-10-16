@@ -168,6 +168,20 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
         resolvers:           []
       })
     })
+
+    it('provider can initiate recovery address change', async function () {
+      await instances.Provider.initiateRecoveryAddressChange(
+        accounts.slice(-1)[0],
+        { from: identity.associatedAddresses[0].address }
+      )
+
+      await verifyIdentity(identity.identity, instances.IdentityRegistry, {
+        recoveryAddress:     accounts.slice(-1)[0],
+        associatedAddresses: identity.associatedAddresses.map(address => address.address).slice(0, 1),
+        providers:           [instances.Provider.address],
+        resolvers:           []
+      })
+    })
   })
 
   describe('Testing Resolver', function () {

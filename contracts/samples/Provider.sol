@@ -65,4 +65,8 @@ contract Provider {
     function removeResolvers(address[] resolvers) public {
         identityRegistry.removeResolvers(identityRegistry.getEIN(msg.sender), resolvers);
     }
+
+    function initiateRecoveryAddressChange(address newRecoveryAddress) public {
+        identityRegistry.initiateRecoveryAddressChange(identityRegistry.getEIN(msg.sender), newRecoveryAddress);
+    }
 }

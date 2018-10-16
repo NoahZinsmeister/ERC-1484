@@ -251,23 +251,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allows providers to add other providers for addresses
-    function addProviders(
-        uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
-    )
-        public _isProviderFor(ein, msg.sender)
-    {
-        Identity storage _identity = identityDirectory[ein];
-
-        require(
-            _identity.associatedAddresses.contains(approvingAddress),
-            "The passed approvingAddress is not associated with the referenced identity."
-        );
-
-        bytes32 messageHash = keccak256(abi.encodePacked("Add Providers", address(this), ein, providers, salt));
-        require(signatureLog[messageHash] == false, "Message hash has already been used.");
-        require(isSigned(approvingAddress, messageHash, v, r, s), "Permission denied.");
-        signatureLog[messageHash] = true;
-
+    function addProviders(uint ein, address[] providers) public _isProviderFor(ein, msg.sender) {
         addProviders(ein, providers, true);
     }
 
@@ -286,23 +270,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allows providers to remove other providers for addresses
-    function removeProviders(
-        uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
-    )
-        public _isProviderFor(ein, msg.sender)
-    {
-        Identity storage _identity = identityDirectory[ein];
-
-        require(
-            _identity.associatedAddresses.contains(approvingAddress),
-            "The passed approvingAddress is not associated with the referenced identity."
-        );
-
-        bytes32 messageHash = keccak256(abi.encodePacked("Remove Providers", address(this), ein, providers, salt));
-        require(signatureLog[messageHash] == false, "Message hash has already been used.");
-        require(isSigned(approvingAddress, messageHash, v, r, s), "Permission denied.");
-        signatureLog[messageHash] = true;
-
+    function removeProviders(uint ein, address[] providers) public _isProviderFor(ein, msg.sender) {
         removeProviders(ein, providers, true);
     }
 

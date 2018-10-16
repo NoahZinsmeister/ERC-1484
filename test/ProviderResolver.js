@@ -130,21 +130,8 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     })
 
     it('can add a provider', async function () {
-      const salt = Math.round(new Date() / 1000)
-      const permissionString = web3.utils.soliditySha3(
-        'Add Providers',
-        instances.IdentityRegistry.address,
-        identity.identity,
-        { t: 'address[]', v: accounts.slice(-1) },
-        salt
-      )
-      const permission = await sign(
-        permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
-      )
-
       await instances.Provider.addProviders(
-        identity.identity, accounts.slice(-1), identity.associatedAddresses[0].address,
-        permission.v, permission.r, permission.s, salt
+        accounts.slice(-1), { from: identity.associatedAddresses[0].address }
       )
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {
@@ -156,21 +143,8 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     })
 
     it('identity can remove a provider', async function () {
-      const salt = Math.round(new Date() / 1000)
-      const permissionString = web3.utils.soliditySha3(
-        'Remove Providers',
-        instances.IdentityRegistry.address,
-        identity.identity,
-        { t: 'address[]', v: accounts.slice(-1) },
-        salt
-      )
-      const permission = await sign(
-        permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
-      )
-
       await instances.Provider.removeProviders(
-        identity.identity, accounts.slice(-1), identity.associatedAddresses[0].address,
-        permission.v, permission.r, permission.s, salt
+        accounts.slice(-1), { from: identity.associatedAddresses[0].address }
       )
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {

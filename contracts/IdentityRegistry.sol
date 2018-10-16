@@ -49,6 +49,7 @@ contract IdentityRegistry is SignatureVerifier {
 
     // define data structures required for recovery and, in dire circumstances, poison pills
     uint public maxAssociatedAddresses = 20;
+    uint public maxProviders = 20;
     uint public recoveryTimeout = 2 weeks;
 
     struct RecoveryAddressChange {
@@ -258,6 +259,7 @@ contract IdentityRegistry is SignatureVerifier {
     // common functionality to add providers
     function addProviders(uint ein, address[] providers, bool delegated) private {
         Identity storage _identity = identityDirectory[ein];
+        require(_identity.providers.length() + providers.length <= maxProviders, "Cannot add >20 providers.");
         for (uint i; i < providers.length; i++) {
             _identity.providers.insert(providers[i]);
             emit ProviderAdded(ein, providers[i], delegated);

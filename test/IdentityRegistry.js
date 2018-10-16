@@ -183,22 +183,8 @@ contract('Testing Identity', function (accounts) {
         )
       }))
 
-      const salt = Math.round(new Date() / 1000)
-      const permissionString = web3.utils.soliditySha3(
-        'Add Providers',
-        instances.IdentityRegistry.address,
-        identity.identity,
-        { t: 'address[]', v: [provider.address] },
-        salt
-      )
-      const permission = await sign(
-        permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
-      )
-
       await instances.IdentityRegistry.addProviders(
-        identity.identity, [provider.address], identity.associatedAddresses[0].address,
-        permission.v, permission.r, permission.s, salt,
-        { from: identity.providers[0].address }
+        identity.identity, [provider.address], { from: identity.providers[0].address }
       )
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {
@@ -219,29 +205,15 @@ contract('Testing Identity', function (accounts) {
         )
       }))
 
-      const salt = Math.round(new Date() / 1000)
-      const permissionString = web3.utils.soliditySha3(
-        'Remove Providers',
-        instances.IdentityRegistry.address,
-        identity.identity,
-        { t: 'address[]', v: [provider.address] },
-        salt
-      )
-      const permission = await sign(
-        permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
-      )
-
       await instances.IdentityRegistry.removeProviders(
-        identity.identity, [provider.address], identity.associatedAddresses[0].address,
-        permission.v, permission.r, permission.s, salt,
-        { from: identity.providers[0].address }
+        identity.identity, [provider.address], { from: identity.providers[0].address }
       )
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {
-        recoveryAddress: identity.recoveryAddress.address,
+        recoveryAddress:     identity.recoveryAddress.address,
         associatedAddresses: identity.associatedAddresses.map(address => address.address),
-        providers: identity.providers.map(provider => provider.address),
-        resolvers: []
+        providers:           identity.providers.map(provider => provider.address),
+        resolvers:           []
       })
     })
 
@@ -249,8 +221,7 @@ contract('Testing Identity', function (accounts) {
       const resolver = accountsPrivate[7]
 
       await instances.IdentityRegistry.addResolvers(
-        identity.identity,
-        [resolver.address],
+        identity.identity, [resolver.address],
         { from: identity.providers[0].address }
       )
 

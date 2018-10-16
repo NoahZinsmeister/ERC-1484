@@ -13,16 +13,8 @@ interface IdentityRegistry {
         address approvingAddress,
         uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt) external;
     function removeAddress(uint ein, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt) external;
-    function addProviders(
-        uint ein,
-        address[] providers,
-        address approvingAddress,
-        uint8 v, bytes32 r, bytes32 s, uint salt) external;
-    function removeProviders(
-        uint ein,
-        address[] providers,
-        address approvingAddress,
-        uint8 v, bytes32 r, bytes32 s, uint salt) external;
+    function addProviders(uint ein, address[] providers) external;
+    function removeProviders(uint ein, address[] providers) external;
     function addResolvers(uint ein, address[] resolvers) external;
     function removeResolvers(uint ein, address[] resolvers) external;
     function initiateRecoveryAddressChange(uint ein, address newRecoveryAddress) external;
@@ -58,20 +50,12 @@ contract Provider {
         identityRegistry.removeAddress(ein, addressToRemove, v, r, s, salt);
     }
 
-    function addProviders(
-        uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
-    )
-        public
-    {
-        identityRegistry.addProviders(ein, providers, approvingAddress, v, r, s, salt);
+    function addProviders(address[] providers) public {
+        identityRegistry.addProviders(identityRegistry.getEIN(msg.sender), providers);
     }
 
-    function removeProviders(
-        uint ein, address[] providers, address approvingAddress, uint8 v, bytes32 r, bytes32 s, uint salt
-    )
-        public
-    {
-        identityRegistry.removeProviders(ein, providers, approvingAddress, v, r, s, salt);
+    function removeProviders(address[] providers) public {
+        identityRegistry.removeProviders(identityRegistry.getEIN(msg.sender), providers);
     }
 
     function addResolvers(address[] resolvers) public {

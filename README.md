@@ -1,6 +1,6 @@
 ## ERC-1484 Reference Implementation
 
-This repo contains the reference implementation for [ERC-1484](https://github.com/ethereum/EIPs/pull/1484). The full text of ERC-1484 is available in [eip-1484.md](./eip-1484.md).
+This repo contains the reference implementation for [ERC-1484](https://github.com/ethereum/EIPs/issues/1495). The full text of ERC-1484 is available in [.md format](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1484.md) and on [the Ethereum EIPs website](https://eips.ethereum.org/EIPS/eip-1484).
 
 Feedback on this proposal is welcomed in [the official discussion forum](https://github.com/ethereum/EIPs/issues/1495).
 

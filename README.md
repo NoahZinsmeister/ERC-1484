@@ -4,7 +4,7 @@ This repo contains the reference implementation for [ERC-1484](https://github.co
 
 Feedback on this proposal is welcomed in [the official discussion forum](https://github.com/ethereum/EIPs/issues/1495). To contribute to or make suggestions about the reference implementation, please [open a PR](https://github.com/hydrogen-dev/ERC-1484/pulls) in this repo.
 
-In addition to the [`Identity Registry` reference implementation](./contracts/IdentityRegistry.sol), this repo also contains a [full test suite](./test), as well as a sample [`Provider`](./samples/Provider) and [`Resolver`](./samples/Resolver).
+In addition to the [`Identity Registry` reference implementation](./contracts/IdentityRegistry.sol), this repo also contains a [full test suite](./test), as well as a sample [`Provider`](./contracts/samples/Provider.sol) and [`Resolver`](.contracts/samples/Resolver.sol), and a sample [`ERC 725 implementation`](./contracts/samples/ERC725/) as a Resolver.
 
 ## Running Tests Locally
 - Install dependencies: `npm install`

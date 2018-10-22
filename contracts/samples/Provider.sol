@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-interface IdentityRegistry {
+interface IdentityRegistryInterface {
     function getEIN(address _address) external view returns (uint ein);
     function mintIdentityDelegated(
         address recoveryAddress,
@@ -21,10 +21,10 @@ interface IdentityRegistry {
 }
 
 contract Provider {
-    IdentityRegistry identityRegistry;
+    IdentityRegistryInterface identityRegistry;
 
     constructor (address identityRegistryAddress) public {
-        identityRegistry = IdentityRegistry(identityRegistryAddress);
+        identityRegistry = IdentityRegistryInterface(identityRegistryAddress);
     }
 
     function mintIdentityDelegated(

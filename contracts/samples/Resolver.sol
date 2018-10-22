@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-interface IdentityRegistry {
+interface IdentityRegistryInterface {
     function getEIN(address _address) external view returns (uint ein);
     function isResolverFor(uint ein, address resolver) external view returns (bool);
     function identityExists(uint ein) external view returns (bool);
@@ -9,10 +9,10 @@ interface IdentityRegistry {
 contract Resolver {
     mapping(uint => string) internal emails;
 
-    IdentityRegistry identityRegistry;
+    IdentityRegistryInterface identityRegistry;
 
     constructor (address identityRegistryAddress) public {
-        identityRegistry = IdentityRegistry(identityRegistryAddress);
+        identityRegistry = IdentityRegistryInterface(identityRegistryAddress);
     }
 
     function setEmailAddress(string email) public {

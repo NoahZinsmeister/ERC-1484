@@ -1,6 +1,6 @@
 const Web3 = require('web3')
 const ethUtil = require('ethereumjs-util')
-const web3 = new Web3(Web3.givenProvider)
+const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
 
 function sign (messageHash, address, privateKey, method) {
   return new Promise(resolve => {

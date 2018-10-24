@@ -30,7 +30,7 @@ The method specific identifier is composed of an optional Ethereum network ident
 	hex-encoded EIN = EIN denoted in IdentityRegistry
 
 
-The `EIN` in the IdentityRegistry is encoded as a uint; however, to standardize the DID, it is hex-encoded in this DID method (see **[3]**).
+The `EIN` in the IdentityRegistry is encoded as a uint; however, to standardize the DID, it is hex-encoded in this DID method.
 
 This specification currently only supports Ethereum "mainnet", "ropsten", "rinkeby", and "kovan", but
 can be extended in the future to support arbitrary Ethereum instances (including private ones).
@@ -84,7 +84,7 @@ To construct a valid DID document from an `erc1484` DID, the following steps are
   1. Add the returned `Recovery Address` to the DID Document in the specified format above.
   1. For the returned `Recovery Address` address, look up the secp256k1 public key associated with the key address. Add the public key to the DID Document in the specified format above.
 1. For each `Associated Address` public key:
-	1. Add a `publicKeyHex` of type `Secp256k1AssociatedAddress2018` (see **[4]**) to the DID Document.
+	1. Add a `publicKeyHex` of type `Secp256k1AssociatedAddress2018` (see **[3]**) to the DID Document.
 
 Note: Service endpoints and other elements of a DID Document may be supported in future versions of this specification.
 
@@ -126,6 +126,4 @@ References
 
  **[2]** https://github.com/ethereum/EIPs/pull/1484
 
- **[3]** https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
-
- **[4]** https://w3c-dvcg.github.io/lds-koblitz2016/
+ **[2]** https://w3c-dvcg.github.io/lds-koblitz2016/

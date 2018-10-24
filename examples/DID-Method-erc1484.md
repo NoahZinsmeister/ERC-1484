@@ -117,7 +117,7 @@ TODO
 
 ## Performance Considerations
 
-In Ethereum, looking up a raw public key from a native 20-byte address is a complex and resource-intensive process. The DID community may want to consider allowing hashed public keys in the DID documents instead of (or in addition to) the raw public keys. It seems this would make certain DID methods such as `erc725` or `erc1484` much simpler to implement, while at the same time not really limiting the spirit and potential use cases of DIDs.
+In Ethereum, looking up a raw public key from a native 20-byte address is a complex and resource-intensive process. The DID community may want to consider allowing the truncated hash of a public key in the DID documents instead of (or in addition to) the raw public keys. It seems this would make certain DID methods such as `erc725` or `erc1484` much simpler to implement, while at the same time not really limiting the spirit and potential use cases of DIDs.
 
 References
 ----------

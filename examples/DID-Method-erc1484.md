@@ -22,12 +22,12 @@ A DID that uses this method MUST begin with the following prefix: `did:erc1484`.
 
 ## Method Specific Identifier
 
-The method specific identifier is composed of an optional Ethereum network identifier with a `:` separator, followed by a Hex-encoded `EIN` as denoted in a registry on the Ethereum Network defined in ERC 1484.
+The method specific identifier is composed of an optional Ethereum network identifier with a `:` separator, followed by an `EIN` encoded as a 32-byte hex string.
 
 	erc1484-did = "did:erc1484:" [erc1484-specific-idstring]
 	erc1484-specific-idstring = [erc1484-network]  ":" [hex-encoded EIN]
 	erc1484-network  = "mainnet" / "ropsten" / "rinkeby" / "kovan"
-	hex-encoded EIN = [EIN denoted in IdentityRegistry]
+	hex-encoded EIN = [EIN denoted in IdentityRegistry encoded as a 32-byte hex string]
 
 
 The `EIN` in the IdentityRegistry is encoded as a uint; however, to standardize the DID, it is hex-encoded in this DID method.

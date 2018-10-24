@@ -1,5 +1,3 @@
-#ERC 1484 DID Resolver
-
 did:erc1484 method
 =================
 16th October 2018

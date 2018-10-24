@@ -1,3 +1,3 @@
 ## Samples
 
-The sample `Provider` and `Resolver` are minimum viable examples.
+This directory contains minimum viable examples of a `Provider` and `Resolver`.

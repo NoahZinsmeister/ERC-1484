@@ -163,7 +163,7 @@ contract ERC1056 {
         require(
             identityRegistry.isSigned(
                 addrDelegated,
-                keccak256(abi.encodePacked("revokeDelegateDelegated", name, value, actionNonce[ein])),
+                keccak256(abi.encodePacked("revokeAttributeDelegated", name, value, actionNonce[ein])),
                 sigV, sigR, sigS
             ),
             "Function execution is incorrectly signed."

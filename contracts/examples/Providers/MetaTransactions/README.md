@@ -14,12 +14,11 @@ Forwarding calls through individual `ExternalProxy` contracts is powerful in tha
 However, it can be slightly limiting, in that it does not work with `Resolvers` that permission functions on 1484 `AssociatedAddresses` or `Providers`. In the case of `AssociatedAddresses`, since each `EIN`'s `ExternalProxy` contract is not an `AssociatedAddress`, nor can it be added as one since it cannot sign messages, the user is stuck. We can of course add the `ExternalProxy` as a `Provider`, but this feels fairly roundabout.
 
 ### Directly from `MetaTransactionProvider`
-Luckily, in cases like the above, calls can instead be made directly from the `MetaTransactionProvider`, which *is natively a `Provider`*. This is accomplished by setting `viaExternal` to `false`. This means that `Resolvers` recieve all transactions from the same address, so:
+Luckily, in cases like the above, calls can instead be made directly from the `MetaTransactionProvider`, which *is natively a `Provider`*. This is accomplished by setting `viaExternal` to `false`. This means that `Resolvers` receive all transactions from the same address, so:
 - The `EIN` **must** be passed through as an argument to all function calls in the `data` argument (or else dApps have no way of knowing which `EIN` the `Provider` is calling on behalf of)
-- `Resolvers` should be actively encouraged to allow `Providers` to call functions on behalf of `EINs` who've added them if they wish their logic to work for Providers ``
+- `Resolvers` should be actively encouraged to allow `Providers` to call functions on behalf of `EINs` who've added them if they wish their logic to work in thus scenario.
 
-
-Which pattern you use depends on the particular `Resolver` or dApp in question, but in either case all calls are routed through the `MetaTransactionProvider`, and can be triggered by any `AssociatedAddress` of an `EIN`.
+Which pattern you use depends on the particular `Resolver` or dApp in question, but in either case all calls are routed through the `MetaTransactionProvider`, and can be triggered by any `AssociatedAddress` of an `EIN` (either directly or via a signature).
 
 ### References
 - [https://github.com/ConsenSys/eth-signer](https://github.com/ConsenSys/eth-signer)

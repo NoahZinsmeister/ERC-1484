@@ -39,9 +39,9 @@ can be extended in the future to support arbitrary Ethereum instances (including
 
 Example `erc1484` DIDs:
 
- * `did:erc1484:00000000000000000000000000000225`
- * `did:erc1484:mainnet:00000000000000000000000000000225`
- * `did:erc1484:ropsten:00000000000000000000000000000225`
+ * `did:erc1484:00000000000000000000000000000000000000000000000000000000000000e1`
+ * `did:erc1484:mainnet:00000000000000000000000000000000000000000000000000000000000000e1`
+ * `did:erc1484:ropsten:00000000000000000000000000000000000000000000000000000000000000e1`
 
 ## DID Document
 
@@ -49,10 +49,10 @@ Example `erc1484` DIDs:
 
 	{
 		"@context": "https://w3id.org/did/v1",
-		"id": "did:erc1484:ropsten:00000000000000000000000000000225",
+		"id": "did:erc1484:ropsten:00000000000000000000000000000000000000000000000000000000000000e1",
 		"RecoveryKey": [{
 			//this can initiate recovery as outlined in the IdentityRegistry
-			"id": "did:erc1484:ropsten:00000000000000000000000000000225",
+			"id": "did:erc1484:ropsten:00000000000000000000000000000000000000000000000000000000000000e1",
       		"type": ["Secp256k1RecoveryKey2018"]
 			"publicKeyHex": "0c8181aaf9bfcd703f25cc6b3814023d4a38cae4aba6e7f1ce8e0c41fbc84210edbc04a97ea6f566e376261c465387f730a39f2f87fd74512ca55a32caea71ce"
 		},
@@ -73,7 +73,7 @@ Example `erc1484` DIDs:
 
 ### Create (Register)
 
-To create a DID, the `mintIdentity` function or the `mintIdentityDelegated` of the `IdentityRegistry ERC 1484 contract` must be called. The returned `EIN` becomes the entity defined by the DID per the specifications above (i.e. `did:erc1484:00000000000000000000000000000225`).
+To create a DID, the `mintIdentity` function or the `mintIdentityDelegated` of the `IdentityRegistry ERC 1484 contract` must be called. The returned `EIN` becomes the entity defined by the DID per the specifications above (i.e. `did:erc1484:00000000000000000000000000000000000000000000000000000000000000e1`).
 
 ### Read (Resolve)
 

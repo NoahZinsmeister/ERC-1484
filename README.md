@@ -10,7 +10,7 @@ This repo contains:
 - The [`Identity Registry` reference implementation](./contracts/IdentityRegistry.sol).
 - A [full test suite](./test).
 - A sample [`Provider`](./contracts/samples/Provider.sol) and [`Resolver`](.contracts/samples/Resolver.sol).
-- [Examples](./examples) explaining and extending various aspects of ERC-1484.
+- [Best Practices](./best-practices) explaining and extending various aspects of ERC-1484.
 - Example [`Providers`](./contracts/examples/Providers) and [`Resolvers`](./contracts/examples/Resolvers). These include an [ERC-725 Resolver](./contracts/examples/Resolvers/ERC725), an [ERC-1056 Resolver](./contracts/examples/Resolvers/ERC1056), and a [Meta-Transactions Provider](./contracts/examples/Providers/MetaTransactions).
 
 ## Deployments

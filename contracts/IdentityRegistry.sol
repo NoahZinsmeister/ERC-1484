@@ -48,8 +48,7 @@ contract IdentityRegistry is SignatureVerifier {
     mapping (bytes32 => bool) public signatureLog;
 
     // define data structures required for recovery and, in dire circumstances, poison pills
-    uint public maxAssociatedAddresses = 20;
-    uint public maxProviders = 20;
+    uint public maxAssociatedAddresses = 50;
     uint public recoveryTimeout = 2 weeks;
 
     struct RecoveryAddressChange {
@@ -151,9 +150,7 @@ contract IdentityRegistry is SignatureVerifier {
             isSigned(
                 associatedAddress,
                 keccak256(
-                    abi.encodePacked(
-                        "Mint", address(this), recoveryAddress, associatedAddress, msg.sender, resolvers
-                    )
+                    abi.encodePacked("Mint", address(this), recoveryAddress, associatedAddress, msg.sender, resolvers)
                 ),
                 v, r, s
             ),
@@ -202,11 +199,8 @@ contract IdentityRegistry is SignatureVerifier {
         public _isProviderFor(ein, msg.sender) _hasIdentity(addressToAdd, false)
     {
         Identity storage _identity = identityDirectory[ein];
-        require(
-            _identity.associatedAddresses.contains(approvingAddress),
-            "The passed approvingAddress is not associated with the referenced identity."
-        );
-        require(_identity.associatedAddresses.length() <= maxAssociatedAddresses, "Cannot add >20 addresses.");
+        require(isAddressFor(ein, approvingAddress), "The passed address is not associated with referenced identity.");
+        require(_identity.associatedAddresses.length() <= maxAssociatedAddresses, "Cannot add too many addresses.");
 
         bytes32 messageHash = keccak256(abi.encodePacked("Add Address", address(this), ein, addressToAdd, salt));
         require(signatureLog[messageHash] == false, "Message hash has already been used.");
@@ -224,23 +218,14 @@ contract IdentityRegistry is SignatureVerifier {
     function removeAddress(uint ein, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt)
         public _isProviderFor(ein, msg.sender)
     {
-        Identity storage _identity = identityDirectory[ein];
+        require(isAddressFor(ein, addressToRemove), "The passed address is not associated with referenced identity.");
 
-        require(
-            _identity.associatedAddresses.contains(addressToRemove),
-            "The passed addressToRemove is not associated with the referenced identity."
-        );
-
-        bytes32 messageHash = keccak256(
-            abi.encodePacked(
-                "Remove Address", address(this), ein, addressToRemove, salt
-            )
-        );
+        bytes32 messageHash = keccak256(abi.encodePacked("Remove Address", address(this), ein, addressToRemove, salt));
         require(signatureLog[messageHash] == false, "Message hash has already been used.");
         require(isSigned(addressToRemove, messageHash, v, r, s), "Permission denied from address to remove.");
         signatureLog[messageHash] = true;
 
-        _identity.associatedAddresses.remove(addressToRemove);
+        identityDirectory[ein].associatedAddresses.remove(addressToRemove);
         delete associatedAddressDirectory[addressToRemove];
 
         emit AddressRemoved(ein, addressToRemove, msg.sender);
@@ -259,7 +244,6 @@ contract IdentityRegistry is SignatureVerifier {
     // common functionality to add providers
     function addProviders(uint ein, address[] providers, bool delegated) private {
         Identity storage _identity = identityDirectory[ein];
-        require(_identity.providers.length() + providers.length <= maxProviders, "Cannot add >20 providers.");
         for (uint i; i < providers.length; i++) {
             _identity.providers.insert(providers[i]);
             emit ProviderAdded(ein, providers[i], delegated);
@@ -308,14 +292,13 @@ contract IdentityRegistry is SignatureVerifier {
     function initiateRecoveryAddressChange(uint ein, address newRecoveryAddress)
         public _isProviderFor(ein, msg.sender)
     {
-        RecoveryAddressChange storage log = recoveryAddressChangeLogs[ein];
-        require(isTimedOut(log.timestamp), "Pending change of recovery address has not timed out.");
+        require(isTimedOut(recoveryAddressChangeLogs[ein].timestamp), "Pending change of recovery address has not timed out.");
 
         // log the old recovery address
         Identity storage _identity = identityDirectory[ein];
         address oldRecoveryAddress = _identity.recoveryAddress;
-        log.timestamp = block.timestamp; // solium-disable-line security/no-block-members
-        log.oldRecoveryAddress = oldRecoveryAddress;
+         // solium-disable-next-line security/no-block-members
+        recoveryAddressChangeLogs[ein] = RecoveryAddressChange(block.timestamp, oldRecoveryAddress);
 
         // make the change
         _identity.recoveryAddress = newRecoveryAddress;
@@ -327,16 +310,14 @@ contract IdentityRegistry is SignatureVerifier {
     function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s)
         public  _identityExists(ein) _hasIdentity(newAssociatedAddress, false)
     {
-        RecoveredChange storage recoveredChange = recoveredChangeLogs[ein];
-        require(isTimedOut(recoveredChange.timestamp), "It's not been long enough since the last recovery.");
+        require(isTimedOut(recoveredChangeLogs[ein].timestamp), "It has not been long enough since the last recovery.");
 
         // ensure the sender is the recovery address/old recovery address if there's been a recent change
         Identity storage _identity = identityDirectory[ein];
         RecoveryAddressChange storage recoveryAddressChange = recoveryAddressChangeLogs[ein];
         if (isTimedOut(recoveryAddressChange.timestamp)) {
             require(
-                msg.sender == _identity.recoveryAddress,
-                "Only the current recovery address can initiate a recovery."
+                msg.sender == _identity.recoveryAddress, "Only the current recovery address can initiate a recovery."
             );
         } else {
             require(
@@ -354,17 +335,12 @@ contract IdentityRegistry is SignatureVerifier {
             "Permission denied."
         );
 
-        emit RecoveryTriggered(
-            ein, msg.sender, _identity.associatedAddresses.members, _identity.providers.members, newAssociatedAddress
-        );
+        emit RecoveryTriggered(ein, msg.sender, _identity.associatedAddresses.members, newAssociatedAddress);
 
         // log the old associated addresses to unlock the poison pill
-        recoveredChange.timestamp = block.timestamp; // solium-disable-line security/no-block-members
-        recoveredChange.hashedOldAssociatedAddresses = keccak256(
-            abi.encodePacked(
-                _identity.associatedAddresses.members
-            )
-        );
+        bytes32 hashedOldAssociatedAddresses = keccak256(abi.encodePacked(_identity.associatedAddresses.members));
+        // solium-disable-next-line security/no-block-members
+        recoveredChangeLogs[ein] = RecoveredChange(block.timestamp, hashedOldAssociatedAddresses);
 
         // remove identity data, and add the new address as the sole associated address
         clearAllIdentityData(_identity, false);
@@ -379,7 +355,7 @@ contract IdentityRegistry is SignatureVerifier {
     {
         RecoveredChange storage log = recoveredChangeLogs[ein];
         require(!isTimedOut(log.timestamp), "No addresses have recently been removed from a recovery.");
-        
+
         // ensure that the msg.sender was an old associated address for the referenced identity
         address[1] memory middleChunk = [msg.sender];
         require(
@@ -387,18 +363,9 @@ contract IdentityRegistry is SignatureVerifier {
             "Cannot activate the poison pill from an address that was not recently removed via recover."
         );
 
-        emit Poisoned(
-            ein,
-            _identity.recoveryAddress,
-            _identity.associatedAddresses.members,
-            _identity.providers.members,
-            _identity.resolvers.members,
-            msg.sender,
-            clearResolvers
-        );
-
         // poison the identity
         Identity storage _identity = identityDirectory[ein];
+        emit Poisoned(ein, _identity.recoveryAddress, msg.sender, clearResolvers);
         clearAllIdentityData(_identity, clearResolvers);
     }
 
@@ -410,7 +377,7 @@ contract IdentityRegistry is SignatureVerifier {
         }
         delete identity.associatedAddresses;
         delete identity.providers;
-        if (clearResolvers) delete identity.providers;
+        if (clearResolvers) delete identity.resolvers;
     }
 
 
@@ -431,19 +398,7 @@ contract IdentityRegistry is SignatureVerifier {
     event ResolverRemoved(uint indexed ein, address resolvers, address provider);
     event RecoveryAddressChangeInitiated(uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress);
     event RecoveryTriggered(
-        uint indexed ein,
-        address recoveryAddress,
-        address[] oldAssociatedAddresses,
-        address[] oldProviders,
-        address newAssociatedAddress
+        uint indexed ein, address recoveryAddress, address[] oldAssociatedAddresses, address newAssociatedAddress
     );
-    event Poisoned(
-        uint indexed ein,
-        address recoveryAddress,
-        address[] oldAssociatedAddresses,
-        address[] oldProviders,
-        address[] oldResolvers,
-        address poisoner,
-        bool resolversCleared
-    );
+    event Poisoned(uint indexed ein, address recoveryAddress, address poisoner, bool resolversCleared);
 }

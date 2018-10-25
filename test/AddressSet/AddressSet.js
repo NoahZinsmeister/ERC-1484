@@ -1,4 +1,4 @@
-const AddressSetTest = artifacts.require('./testing/AddressSetTest.sol')
+const AddressSetTest = artifacts.require('./AddressSet/AddressSetTest.sol')
 
 async function verify (expectedLength, expectedMembers) {
   // check length

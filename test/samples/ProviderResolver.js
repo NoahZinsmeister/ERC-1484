@@ -1,7 +1,7 @@
 const Web3 = require('web3')
 const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
 
-const { sign, verifyIdentity } = require('./common')
+const { sign, verifyIdentity } = require('../common')
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
 const Provider = artifacts.require('./samples/Provider.sol')

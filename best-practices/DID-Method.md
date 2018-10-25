@@ -126,4 +126,4 @@ References
 
  **[2]** https://github.com/ethereum/EIPs/pull/1484
 
- **[2]** https://w3c-dvcg.github.io/lds-koblitz2016/
+ **[3]** https://w3c-dvcg.github.io/lds-koblitz2016/

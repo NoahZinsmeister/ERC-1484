@@ -66,7 +66,7 @@ contract('Testing Identity', function (accounts) {
       // test delegated minting
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
-        'Mint',
+        'I authorize an Identity to be minted on my behalf.',
         instances.IdentityRegistry.address,
         identity.recoveryAddress.address,
         identity.associatedAddresses[0].address,
@@ -104,8 +104,16 @@ contract('Testing Identity', function (accounts) {
     it('provider can add other addresses', async function () {
       for (const address of [identity.associatedAddresses[1], identity.associatedAddresses[2], accountsPrivate[5]]) {
         const timestamp = Math.round(new Date() / 1000) - 1
+        const permissionStringApproving = web3.utils.soliditySha3(
+          'I authorize adding this address to my Identity.',
+          instances.IdentityRegistry.address,
+          identity.identity,
+          address.address,
+          timestamp
+        )
+
         const permissionString = web3.utils.soliditySha3(
-          'Add Address',
+          'I authorize being added to this Identity.',
           instances.IdentityRegistry.address,
           identity.identity,
           address.address,
@@ -113,7 +121,7 @@ contract('Testing Identity', function (accounts) {
         )
 
         const permissionApproving = await sign(
-          permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
+          permissionStringApproving, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
         )
         const permission = await sign(permissionString, address.address, address.private)
 
@@ -149,7 +157,7 @@ contract('Testing Identity', function (accounts) {
       const address = accountsPrivate[5]
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
-        'Remove Address',
+        'I authorize removing this address from my Identity.',
         instances.IdentityRegistry.address,
         identity.identity,
         address.address,
@@ -276,13 +284,15 @@ contract('Testing Identity', function (accounts) {
       timestamp = Math.round(new Date() / 1000) - 1
       futureTimestamp = timestamp + twoWeeks
       const permissionString = web3.utils.soliditySha3(
-        'Recover', instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, timestamp
+        'I authorize being added to this Identity via recovery.',
+        instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, timestamp
       )
       newAssociatedAddressPermission = await sign(
         permissionString, newAssociatedAddress.address, newAssociatedAddress.private
       )
       const futurePermissionString = web3.utils.soliditySha3(
-        'Recover', instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, futureTimestamp
+        'I authorize being added to this Identity via recovery.',
+        instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, futureTimestamp
       )
       futureNewAssociatedAddressPermission = await sign(
         futurePermissionString, newAssociatedAddress.address, newAssociatedAddress.private

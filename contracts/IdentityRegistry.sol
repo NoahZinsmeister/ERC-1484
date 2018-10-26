@@ -158,7 +158,8 @@ contract IdentityRegistry is SignatureVerifier {
                 associatedAddress,
                 keccak256(
                     abi.encodePacked(
-                        "Mint", address(this), recoveryAddress, associatedAddress, msg.sender, resolvers, timestamp
+                        "I authorize an Identity to be minted on my behalf.",
+                        address(this), recoveryAddress, associatedAddress, msg.sender, resolvers, timestamp
                     )
                 ),
                 v, r, s
@@ -208,12 +209,20 @@ contract IdentityRegistry is SignatureVerifier {
         ensureSignatureTimeValid(timestamp[0]) ensureSignatureTimeValid(timestamp[1])
     {
         uint ein = getEIN(approvingAddress);
-        require(identityDirectory[ein].associatedAddresses.length() <= maxAssociatedAddresses, "Cannot add too many addresses.");
+        require(
+            identityDirectory[ein].associatedAddresses.length() <= maxAssociatedAddresses,
+            "Cannot add too many addresses."
+        );
 
         require(
             isSigned(
                 approvingAddress,
-                keccak256(abi.encodePacked("Add Address", address(this), ein, addressToAdd, timestamp[0])),
+                keccak256(
+                    abi.encodePacked(
+                        "I authorize adding this address to my Identity.",
+                        address(this), ein, addressToAdd, timestamp[0]
+                    )
+                ),
                 v[0], r[0], s[0]
             ),
             "Permission denied from approving address."
@@ -221,7 +230,11 @@ contract IdentityRegistry is SignatureVerifier {
         require(
             isSigned(
                 addressToAdd,
-                keccak256(abi.encodePacked("Add Address", address(this), ein, addressToAdd, timestamp[1])),
+                keccak256(
+                    abi.encodePacked(
+                        "I authorize being added to this Identity.", address(this), ein, addressToAdd, timestamp[1]
+                    )
+                ),
                 v[1], r[1], s[1]
             ),
             "Permission denied from address to add."
@@ -240,9 +253,11 @@ contract IdentityRegistry is SignatureVerifier {
         uint ein = getEIN(addressToRemove);
 
         bytes32 messageHash = keccak256(
-            abi.encodePacked("Remove Address", address(this), ein, addressToRemove, timestamp)
+            abi.encodePacked(
+                "I authorize removing this address from my Identity.", address(this), ein, addressToRemove, timestamp
+            )
         );
-        require(isSigned(addressToRemove, messageHash, v, r, s), "Permission denied from address to remove.");
+        require(isSigned(addressToRemove, messageHash, v, r, s), "Permission denied.");
 
         identityDirectory[ein].associatedAddresses.remove(addressToRemove);
         delete associatedAddressDirectory[addressToRemove];
@@ -330,7 +345,7 @@ contract IdentityRegistry is SignatureVerifier {
 
     // initiate recovery, only callable by the current recovery address, or the one changed within the past 2 weeks
     function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s, uint timestamp)
-        public  _identityExists(ein) _hasIdentity(newAssociatedAddress, false) ensureSignatureTimeValid(timestamp)
+        public _identityExists(ein) _hasIdentity(newAssociatedAddress, false) ensureSignatureTimeValid(timestamp)
     {
         require(
             isRecoveryTimedOut(recoveredChangeLogs[ein].timestamp),
@@ -354,7 +369,12 @@ contract IdentityRegistry is SignatureVerifier {
         require(
             isSigned(
                 newAssociatedAddress,
-                keccak256(abi.encodePacked("Recover", address(this), ein, newAssociatedAddress, timestamp)),
+                keccak256(
+                    abi.encodePacked(
+                        "I authorize being added to this Identity via recovery.",
+                        address(this), ein, newAssociatedAddress, timestamp
+                    )
+                ),
                 v, r, s
             ),
             "Permission denied."

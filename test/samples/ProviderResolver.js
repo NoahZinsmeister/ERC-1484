@@ -45,7 +45,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     it('Identity can be minted', async function () {
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
-        'Mint',
+        'I authorize an Identity to be minted on my behalf.',
         instances.IdentityRegistry.address,
         identity.recoveryAddress.address,
         identity.associatedAddresses[0].address,
@@ -73,8 +73,16 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     it('provider can add other addresses', async function () {
       const address = identity.associatedAddresses[1]
       const timestamp = Math.round(new Date() / 1000) - 1
+      const permissionStringApproving = web3.utils.soliditySha3(
+        'I authorize adding this address to my Identity.',
+        instances.IdentityRegistry.address,
+        identity.identity,
+        address.address,
+        timestamp
+      )
+
       const permissionString = web3.utils.soliditySha3(
-        'Add Address',
+        'I authorize being added to this Identity.',
         instances.IdentityRegistry.address,
         identity.identity,
         address.address,
@@ -82,7 +90,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       )
 
       const permissionApproving = await sign(
-        permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
+        permissionStringApproving, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
       const permission = await sign(permissionString, address.address, address.private)
 
@@ -106,7 +114,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       const address = identity.associatedAddresses[1]
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
-        'Remove Address',
+        'I authorize removing this address from my Identity.',
         instances.IdentityRegistry.address,
         identity.identity,
         address.address,

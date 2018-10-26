@@ -7,8 +7,7 @@ interface IdentityRegistryInterface {
         uint8 v, bytes32 r, bytes32 s, uint timestamp
     ) external returns (uint ein);
     function addAddress(
-        address approvingAddress, address addressToAdd,
-        uint8[2] v, bytes32[2] r, bytes32[2] s, uint[2] timestamp
+        address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint[2] timestamp
     ) external;
     function removeAddress(address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint timestamp) external;
     function addProviders(uint ein, address[] providers) external;

@@ -31,15 +31,15 @@ The technically hardest but conceptually easiest solution is to simply ensure th
 ### 2. Enforced Signature Uniqueness
 If uniqueness by design isn't possible, it can be enforced in three ways:
 
+#### Timeouts
+Every time an address calls a permissioned function, included in the message they sign must be a timestamp that is within some lagged window of the current block's timestamp.
+- Pros: Does not require on-chain storage.
+- Cons: Can introduce somewhat fragile timing windows, is slightly manipulable by miners.
+
 #### Nonces
 Every time an address calls a permissioned function, included in the message they sign must be a nonce that increments every call.
 - Pros: Relatively light on gas costs (only ~5k gas to update an existing storage variable)
 - Cons: Requires an on-chain read for every transaction. Can lead to complications with >1 pending transaction.
-
-#### Timeouts
-Every time an address calls a permissioned function, included in the message they sign must be a timestamp that is within some window of the current block's timestamp.
-- Pros: Does not require on-chain storage.
-- Cons: Can introduce somewhat fragile timing windows, is slightly manipulable by miners.
 
 #### Signature Logs (*Not Recommended*)
 Every time an address calls a permissioned function, the message hash is stored in a log, and must be enforced to never be reused. To ensure that the same signature can be passed twice (if intended), a per-transaction salt must be included.

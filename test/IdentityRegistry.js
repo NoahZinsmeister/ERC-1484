@@ -64,20 +64,22 @@ contract('Testing Identity', function (accounts) {
       assert.isTrue(mintedIdentity.eq(web3.utils.toBN(1)), 'Unexpected identity token user')
 
       // test delegated minting
+      const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
         'Mint',
         instances.IdentityRegistry.address,
         identity.recoveryAddress.address,
         identity.associatedAddresses[0].address,
         identity.providers[0].address,
-        { t: 'address[]', v: [] }
+        { t: 'address[]', v: [] },
+        timestamp
       )
       const permission = await sign(
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
       const mintedIdentityDelegated = await instances.IdentityRegistry.mintIdentityDelegated.call(
         identity.recoveryAddress.address, identity.associatedAddresses[0].address, [],
-        permission.v, permission.r, permission.s,
+        permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
       assert.isTrue(mintedIdentityDelegated.eq(web3.utils.toBN(1)), 'Unexpected identity token delegated')
@@ -101,28 +103,26 @@ contract('Testing Identity', function (accounts) {
 
     it('provider can add other addresses', async function () {
       for (const address of [identity.associatedAddresses[1], identity.associatedAddresses[2], accountsPrivate[5]]) {
-        const salt = Math.round(new Date() / 1000)
+        const timestamp = Math.round(new Date() / 1000) - 1
         const permissionString = web3.utils.soliditySha3(
           'Add Address',
           instances.IdentityRegistry.address,
           identity.identity,
           address.address,
-          salt
+          timestamp
         )
 
         const permissionApproving = await sign(
           permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
         )
-        const permission = await sign(
-          permissionString, address.address, address.private
-        )
+        const permission = await sign(permissionString, address.address, address.private)
 
         await instances.IdentityRegistry.addAddress(
-          identity.identity, address.address, identity.associatedAddresses[0].address,
+          identity.associatedAddresses[0].address, address.address,
           [permissionApproving.v, permission.v],
           [permissionApproving.r, permission.r],
           [permissionApproving.s, permission.s],
-          salt,
+          [timestamp, timestamp],
           { from: identity.providers[0].address }
         )
 
@@ -147,21 +147,19 @@ contract('Testing Identity', function (accounts) {
 
     it('provider can remove addresses', async function () {
       const address = accountsPrivate[5]
-      const salt = Math.round(new Date() / 1000)
+      const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
         'Remove Address',
         instances.IdentityRegistry.address,
         identity.identity,
         address.address,
-        salt
+        timestamp
       )
 
-      const permission = await sign(
-        permissionString, address.address, address.private
-      )
+      const permission = await sign(permissionString, address.address, address.private)
 
       await instances.IdentityRegistry.removeAddress(
-        identity.identity, address.address, permission.v, permission.r, permission.s, salt,
+        address.address, permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
 
@@ -269,18 +267,30 @@ contract('Testing Identity', function (accounts) {
 
     let newAssociatedAddress
     let newAssociatedAddressPermission
+    let timestamp
+    let futureTimestamp
+    let futureNewAssociatedAddressPermission
+    const twoWeeks = 60 * 60 * 24 * 14
     it('New recovery address cannot trigger recovery', async function () {
       newAssociatedAddress = accountsPrivate[9]
+      timestamp = Math.round(new Date() / 1000) - 1
+      futureTimestamp = timestamp + twoWeeks
       const permissionString = web3.utils.soliditySha3(
-        'Recover', instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address
+        'Recover', instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, timestamp
       )
       newAssociatedAddressPermission = await sign(
         permissionString, newAssociatedAddress.address, newAssociatedAddress.private
       )
+      const futurePermissionString = web3.utils.soliditySha3(
+        'Recover', instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, futureTimestamp
+      )
+      futureNewAssociatedAddressPermission = await sign(
+        futurePermissionString, newAssociatedAddress.address, newAssociatedAddress.private
+      )
 
       await instances.IdentityRegistry.triggerRecovery(
         identity.identity, newAssociatedAddress.address,
-        newAssociatedAddressPermission.v, newAssociatedAddressPermission.r, newAssociatedAddressPermission.s,
+        newAssociatedAddressPermission.v, newAssociatedAddressPermission.r, newAssociatedAddressPermission.s, timestamp,
         { from: newRecoveryAddress.address }
       )
         .then(() => assert.fail('new recovery address triggered recovery', 'transaction should fail'))
@@ -300,10 +310,12 @@ contract('Testing Identity', function (accounts) {
     })
 
     it('After 2 weeks, old recovery address cannot trigger recovery', async function () {
-      await timeTravel(60 * 60 * 24 * 14 + 1)
+      await timeTravel(twoWeeks + 1)
+
       await instances.IdentityRegistry.triggerRecovery(
         identity.identity, newAssociatedAddress.address,
-        newAssociatedAddressPermission.v, newAssociatedAddressPermission.r, newAssociatedAddressPermission.s,
+        futureNewAssociatedAddressPermission.v, futureNewAssociatedAddressPermission.r,
+        futureNewAssociatedAddressPermission.s, futureTimestamp,
         { from: identity.recoveryAddress.address }
       )
         .then(() => assert.fail('old recovery address triggered recovery', 'transaction should fail'))
@@ -334,7 +346,8 @@ contract('Testing Identity', function (accounts) {
 
       await instances.IdentityRegistry.triggerRecovery(
         identity.identity, newAssociatedAddress.address,
-        newAssociatedAddressPermission.v, newAssociatedAddressPermission.r, newAssociatedAddressPermission.s,
+        futureNewAssociatedAddressPermission.v, futureNewAssociatedAddressPermission.r,
+        futureNewAssociatedAddressPermission.s, futureTimestamp,
         { from: newRecoveryAddress.address }
       )
 

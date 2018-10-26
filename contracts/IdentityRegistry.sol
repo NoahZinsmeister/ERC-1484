@@ -44,12 +44,10 @@ contract IdentityRegistry is SignatureVerifier {
     mapping (uint => Identity) private identityDirectory;
     mapping (address => uint) private associatedAddressDirectory;
 
-    // signature log to prevent replay attacks
-    mapping (bytes32 => bool) public signatureLog;
-
     // define data structures required for recovery and, in dire circumstances, poison pills
     uint public maxAssociatedAddresses = 50;
     uint public recoveryTimeout = 2 weeks;
+    uint public signatureTimeout = 1 weeks;
 
     struct RecoveryAddressChange {
         uint timestamp;
@@ -105,7 +103,7 @@ contract IdentityRegistry is SignatureVerifier {
 
     // enforces that an identity has a provider
     modifier _isProviderFor(uint ein, address provider) {
-        require(isProviderFor(ein, provider), "The identity has/has not set the passed provider.");
+        require(isProviderFor(ein, provider), "The identity has not set the passed provider.");
         _;
     }
 
@@ -129,10 +127,18 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // checks whether or not a passed timestamp is within/not within the timeout period
-    function isTimedOut(uint timestamp) private view returns (bool) {
+    function isRecoveryTimedOut(uint timestamp) private view returns (bool) {
         return block.timestamp > timestamp + recoveryTimeout; // solium-disable-line security/no-block-members
     }
 
+    modifier ensureSignatureTimeValid(uint timestamp) {
+        require(
+            // solium-disable-next-line security/no-block-members
+            block.timestamp >= timestamp && timestamp + signatureTimeout > block.timestamp,
+            "Timestamp is not valid."
+        );
+        _;
+    }
 
     // mints a new identity for the msg.sender
     function mintIdentity(address recoveryAddress, address provider, address[] resolvers) public returns (uint ein)
@@ -142,15 +148,18 @@ contract IdentityRegistry is SignatureVerifier {
 
     // mints a new identity for the passed address (with the msg.sender as the implicit provider)
     function mintIdentityDelegated(
-        address recoveryAddress, address associatedAddress, address[] resolvers, uint8 v, bytes32 r, bytes32 s
+        address recoveryAddress, address associatedAddress, address[] resolvers,
+        uint8 v, bytes32 r, bytes32 s, uint timestamp
     )
-        public returns (uint ein)
+        public ensureSignatureTimeValid(timestamp) returns (uint ein)
     {
         require(
             isSigned(
                 associatedAddress,
                 keccak256(
-                    abi.encodePacked("Mint", address(this), recoveryAddress, associatedAddress, msg.sender, resolvers)
+                    abi.encodePacked(
+                        "Mint", address(this), recoveryAddress, associatedAddress, msg.sender, resolvers, timestamp
+                    )
                 ),
                 v, r, s
             ),
@@ -191,39 +200,49 @@ contract IdentityRegistry is SignatureVerifier {
 
     // allow providers to add addresses
     function addAddress(
-        uint ein,
-        address addressToAdd,
         address approvingAddress,
-        uint8[2] v, bytes32[2] r, bytes32[2] s, uint salt
+        address addressToAdd,
+        uint8[2] v, bytes32[2] r, bytes32[2] s, uint[2] timestamp
     )
-        public _isProviderFor(ein, msg.sender) _hasIdentity(addressToAdd, false)
+        public _hasIdentity(addressToAdd, false)
+        ensureSignatureTimeValid(timestamp[0]) ensureSignatureTimeValid(timestamp[1])
     {
-        Identity storage _identity = identityDirectory[ein];
-        require(isAddressFor(ein, approvingAddress), "The passed address is not associated with referenced identity.");
-        require(_identity.associatedAddresses.length() <= maxAssociatedAddresses, "Cannot add too many addresses.");
+        uint ein = getEIN(approvingAddress);
+        require(identityDirectory[ein].associatedAddresses.length() <= maxAssociatedAddresses, "Cannot add too many addresses.");
 
-        bytes32 messageHash = keccak256(abi.encodePacked("Add Address", address(this), ein, addressToAdd, salt));
-        require(signatureLog[messageHash] == false, "Message hash has already been used.");
-        require(isSigned(approvingAddress, messageHash, v[0], r[0], s[0]), "Permission denied from approving address.");
-        require(isSigned(addressToAdd, messageHash, v[1], r[1], s[1]), "Permission denied from address to add.");
-        signatureLog[messageHash] = true;
+        require(
+            isSigned(
+                approvingAddress,
+                keccak256(abi.encodePacked("Add Address", address(this), ein, addressToAdd, timestamp[0])),
+                v[0], r[0], s[0]
+            ),
+            "Permission denied from approving address."
+        );
+        require(
+            isSigned(
+                addressToAdd,
+                keccak256(abi.encodePacked("Add Address", address(this), ein, addressToAdd, timestamp[1])),
+                v[1], r[1], s[1]
+            ),
+            "Permission denied from address to add."
+        );
 
-        _identity.associatedAddresses.insert(addressToAdd);
+        identityDirectory[ein].associatedAddresses.insert(addressToAdd);
         associatedAddressDirectory[addressToAdd] = ein;
 
         emit AddressAdded(ein, addressToAdd, approvingAddress, msg.sender);
     }
 
     // allow providers to remove addresses
-    function removeAddress(uint ein, address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint salt)
-        public _isProviderFor(ein, msg.sender)
+    function removeAddress(address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint timestamp)
+        public ensureSignatureTimeValid(timestamp)
     {
-        require(isAddressFor(ein, addressToRemove), "The passed address is not associated with referenced identity.");
+        uint ein = getEIN(addressToRemove);
 
-        bytes32 messageHash = keccak256(abi.encodePacked("Remove Address", address(this), ein, addressToRemove, salt));
-        require(signatureLog[messageHash] == false, "Message hash has already been used.");
+        bytes32 messageHash = keccak256(
+            abi.encodePacked("Remove Address", address(this), ein, addressToRemove, timestamp)
+        );
         require(isSigned(addressToRemove, messageHash, v, r, s), "Permission denied from address to remove.");
-        signatureLog[messageHash] = true;
 
         identityDirectory[ein].associatedAddresses.remove(addressToRemove);
         delete associatedAddressDirectory[addressToRemove];
@@ -232,7 +251,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allows addresses associated with an identity to add providers
-    function addProviders(address[] providers) public _hasIdentity(msg.sender, true) {
+    function addProviders(address[] providers) public {
         addProviders(getEIN(msg.sender), providers, false);
     }
 
@@ -251,7 +270,7 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // allows addresses associated with an identity to remove providers
-    function removeProviders(address[] providers) public _hasIdentity(msg.sender, true) {
+    function removeProviders(address[] providers) public {
         removeProviders(getEIN(msg.sender), providers, false);
     }
 
@@ -292,7 +311,10 @@ contract IdentityRegistry is SignatureVerifier {
     function initiateRecoveryAddressChange(uint ein, address newRecoveryAddress)
         public _isProviderFor(ein, msg.sender)
     {
-        require(isTimedOut(recoveryAddressChangeLogs[ein].timestamp), "Pending change of recovery address has not timed out.");
+        require(
+            isRecoveryTimedOut(recoveryAddressChangeLogs[ein].timestamp),
+            "Pending change of recovery address has not timed out."
+        );
 
         // log the old recovery address
         Identity storage _identity = identityDirectory[ein];
@@ -307,15 +329,18 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     // initiate recovery, only callable by the current recovery address, or the one changed within the past 2 weeks
-    function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s)
-        public  _identityExists(ein) _hasIdentity(newAssociatedAddress, false)
+    function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s, uint timestamp)
+        public  _identityExists(ein) _hasIdentity(newAssociatedAddress, false) ensureSignatureTimeValid(timestamp)
     {
-        require(isTimedOut(recoveredChangeLogs[ein].timestamp), "It has not been long enough since the last recovery.");
+        require(
+            isRecoveryTimedOut(recoveredChangeLogs[ein].timestamp),
+            "It has not been long enough since the last recovery."
+        );
 
         // ensure the sender is the recovery address/old recovery address if there's been a recent change
         Identity storage _identity = identityDirectory[ein];
         RecoveryAddressChange storage recoveryAddressChange = recoveryAddressChangeLogs[ein];
-        if (isTimedOut(recoveryAddressChange.timestamp)) {
+        if (isRecoveryTimedOut(recoveryAddressChange.timestamp)) {
             require(
                 msg.sender == _identity.recoveryAddress, "Only the current recovery address can initiate a recovery."
             );
@@ -329,7 +354,7 @@ contract IdentityRegistry is SignatureVerifier {
         require(
             isSigned(
                 newAssociatedAddress,
-                keccak256(abi.encodePacked("Recover", address(this), ein, newAssociatedAddress)),
+                keccak256(abi.encodePacked("Recover", address(this), ein, newAssociatedAddress, timestamp)),
                 v, r, s
             ),
             "Permission denied."
@@ -354,7 +379,7 @@ contract IdentityRegistry is SignatureVerifier {
         public _identityExists(ein)
     {
         RecoveredChange storage log = recoveredChangeLogs[ein];
-        require(!isTimedOut(log.timestamp), "No addresses have recently been removed from a recovery.");
+        require(!isRecoveryTimedOut(log.timestamp), "No addresses have recently been removed from a recovery.");
 
         // ensure that the msg.sender was an old associated address for the referenced identity
         address[1] memory middleChunk = [msg.sender];

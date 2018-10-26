@@ -43,20 +43,22 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
 
   describe('Testing Provider', function () {
     it('Identity can be minted', async function () {
+      const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
         'Mint',
         instances.IdentityRegistry.address,
         identity.recoveryAddress.address,
         identity.associatedAddresses[0].address,
         instances.Provider.address,
-        { t: 'address[]', v: [identity.resolver] }
+        { t: 'address[]', v: [identity.resolver] },
+        timestamp
       )
       const permission = await sign(
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
       await instances.Provider.mintIdentityDelegated(
         identity.recoveryAddress.address, identity.associatedAddresses[0].address, [identity.resolver],
-        permission.v, permission.r, permission.s
+        permission.v, permission.r, permission.s, timestamp
       )
       identity.identity = web3.utils.toBN(1)
 
@@ -70,28 +72,26 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
 
     it('provider can add other addresses', async function () {
       const address = identity.associatedAddresses[1]
-      const salt = Math.round(new Date() / 1000)
+      const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
         'Add Address',
         instances.IdentityRegistry.address,
         identity.identity,
         address.address,
-        salt
+        timestamp
       )
 
       const permissionApproving = await sign(
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
-      const permission = await sign(
-        permissionString, address.address, address.private
-      )
+      const permission = await sign(permissionString, address.address, address.private)
 
       await instances.Provider.addAddress(
-        identity.identity, address.address, identity.associatedAddresses[0].address,
+        identity.associatedAddresses[0].address, address.address,
         [permissionApproving.v, permission.v],
         [permissionApproving.r, permission.r],
         [permissionApproving.s, permission.s],
-        salt
+        [timestamp, timestamp]
       )
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {
@@ -104,22 +104,18 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
 
     it('provider can remove addresses', async function () {
       const address = identity.associatedAddresses[1]
-      const salt = Math.round(new Date() / 1000)
+      const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
         'Remove Address',
         instances.IdentityRegistry.address,
         identity.identity,
         address.address,
-        salt
+        timestamp
       )
 
-      const permission = await sign(
-        permissionString, address.address, address.private
-      )
+      const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.Provider.removeAddress(
-        identity.identity, address.address, permission.v, permission.r, permission.s, salt
-      )
+      await instances.Provider.removeAddress(address.address, permission.v, permission.r, permission.s, timestamp)
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     identity.recoveryAddress.address,

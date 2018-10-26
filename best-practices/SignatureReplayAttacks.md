@@ -38,8 +38,8 @@ Every time an address calls a permissioned function, included in the message the
 
 #### Timeouts
 Every time an address calls a permissioned function, included in the message they sign must be a timestamp that is within some window of the current block's timestamp.
-- Pros: Relatively light on gas costs (only ~5k gas to update an existing storage variable)
-- Cons: Requires an on-chain read for every transaction. Can lead to complications with >1 pending transaction.
+- Pros: Does not require on-chain storage.
+- Cons: Can introduce somewhat fragile timing windows, is slightly manipulable by miners.
 
 #### Signature Logs (*Not Recommended*)
 Every time an address calls a permissioned function, the message hash is stored in a log, and must be enforced to never be reused. To ensure that the same signature can be passed twice (if intended), a per-transaction salt must be included.

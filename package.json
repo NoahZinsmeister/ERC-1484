@@ -7,10 +7,13 @@
     "url": "git+https://github.com/hydrogen-dev/identity-erc.git"
   },
   "scripts": {
-    "test": "npx truffle test --network development",
     "build": "npm run buidl",
     "buidl": "rm -rf build/ && npx truffle compile",
-    "chain": "npx ganache-cli --port 8545 --seed hydro"
+    "chain": "npx ganache-cli --port 8545 --seed hydro",
+    "test": "npx truffle test --network development",
+    "cover": "npx solidity-coverage",
+    "chain-cover": "npx testrpc-sc --port 8555 -l 0xfffffffffff -g 0x01 --allowUnlimitedContractSize --seed hydro",
+    "test-cover": "npx truffle test --network coverage"
   },
   "keywords": [
     "ERC",
@@ -39,12 +42,14 @@
     "web3": "^1.0.0-beta.36"
   },
   "devDependencies": {
+    "coveralls": "^3.0.2",
     "eslint": "^5.6.1",
     "eslint-config-standard": "^12.0.0",
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-node": "^7.0.1",
     "eslint-plugin-promise": "^4.0.1",
     "eslint-plugin-standard": "^4.0.0",
+    "solidity-coverage": "^0.5.11",
     "solium": "^1.1.8"
   }
 }

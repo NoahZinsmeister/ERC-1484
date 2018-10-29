@@ -60,12 +60,17 @@ contract('Testing AddressSet', function (accounts) {
   })
 
   it('Other members added correctly', async function () {
-    await insert(accounts.slice(1))
+    await insert(accounts)
     await verify(accounts.length, accounts)
   })
 
   it('Set reset correctly', async function () {
     await setInstance.reset()
+    await verify(0, [])
+  })
+
+  it('Removing a non-existent member has no effect', async function () {
+    await remove(accounts.slice(0, 1))
     await verify(0, [])
   })
 })

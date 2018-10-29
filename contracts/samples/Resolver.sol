@@ -18,8 +18,7 @@ contract Resolver {
     function setEmailAddress(string email) public {
         uint ein = identityRegistry.getEIN(msg.sender);
         require(
-            identityRegistry.isResolverFor(ein, address(this)),
-            "The calling identity does not have this resolver set."
+            identityRegistry.isResolverFor(ein, address(this)), "The calling identity does not have this resolver set."
         );
         emails[ein] = email;
     }

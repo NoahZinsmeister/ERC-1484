@@ -211,5 +211,13 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       const emailAddress = await instances.Resolver.getEmail(identity.identity)
       assert.equal(emailAddress, 'test@test.test', 'Unexpected email address.')
     })
+
+    it('cannot access email addresses for non-existent EINs', async function () {
+      await instances.Resolver.getEmail(100)
+        .then(() => assert.fail('email address was read', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'The referenced identity does not exist.', 'wrong rejection reason'
+        ))
+    })
   })
 })

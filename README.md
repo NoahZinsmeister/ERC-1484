@@ -1,4 +1,6 @@
 ## ERC-1484 Reference Implementation
+[![Build Status](https://travis-ci.org/hydrogen-dev/ERC-1484.svg?branch=master)](https://travis-ci.org/hydrogen-dev/ERC-1484)
+[![Coverage Status](https://coveralls.io/repos/github/hydrogen-dev/ERC-1484/badge.svg?branch=master)](https://coveralls.io/github/hydrogen-dev/ERC-1484?branch=master)
 
 This repo contains the reference implementation for [ERC-1484](https://github.com/ethereum/EIPs/issues/1495). The full text of ERC-1484 is available in [.md format](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1484.md) and on [the Ethereum EIPs website](https://eips.ethereum.org/EIPS/eip-1484).
 

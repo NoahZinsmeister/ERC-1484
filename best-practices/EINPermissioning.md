@@ -31,25 +31,10 @@ function performLogic(...) public {
 ```
 
 ### Interface 2: Permission by signature
-If we are going to allow someone other than an `AssociatedAddress` holder to call functions pertaining to an EIN, an `AssociatedAddress` will have to sign their permission. Importantly, one must take care to avoid replay attacks under such a scheme (see [SignatureReplayAttacks.md](./SignatureReplayAttacks.md)). A well-implemented solution will have 3 options to pass the `Identity` to the app:
-
-#### Passing the EIN (*Not Recommended*)
-At first glance, the most obvious solution is to pass the EIN of the user in question.
-
-```solidity
-function performLogic(uint ein, uint8 v, bytes32 r, bytes32 s, ...) public {
-  bytes32 messageHash = keccak256(abi.encodePacked(...));
-  address signingAddress = ecrecover(messageHash, v, r, s);
-  require(identityRegistry.isAddressFor(ein, signingAddress));
-
-  performLogic(ein, ...);
-}
-```
-
-This solution has one big drawback. Recovering the address from the signature, and checking that it belongs to the passed `EIN` only works for signatures of the specific form above. It notably does not work for signatures prefixed with the somewhat-standard `\x19Ethereum Signed Message:\n32`. So, this method cannot be agnostic between prefixed and un-prefixed signatures unless it recovers 2 addresses and checks that either one belongs to the `EIN`, which is somewhat unwieldy.
+If we are going to allow someone other than an `AssociatedAddress` holder to call functions pertaining to an EIN, an `AssociatedAddress` will have to sign their permission. **Importantly, one must take care to avoid replay attacks under such a scheme (see [SignatureReplayAttacks.md](./SignatureReplayAttacks.md))**. However, any well-implemented solution will have 3 options to pass the `Identity` to the app:
 
 #### Only Address (*Recommended*)
-Another solution would be to simply pass the address that generated the passed signature, and get the `EIN` from that signature.
+One solution is to simply pass the address that generated the passed signature, and get the `EIN` from that signature.
 
 ```solidity
 function performLogic(address approvingAddress, uint8 v, bytes32 r, bytes32 s, ...) public {
@@ -63,7 +48,22 @@ function performLogic(address approvingAddress, uint8 v, bytes32 r, bytes32 s, .
 
 This is a nice solution, because we know that the EIN is automatically valid once we know the signature checks out!
 
-#### Both (*Recommended*)
+#### Passing the EIN
+Another (perhaps more 'obvious') solution is to pass the EIN of the user in question.
+
+```solidity
+function performLogic(uint ein, uint8 v, bytes32 r, bytes32 s, ...) public {
+  bytes32 messageHash = keccak256(abi.encodePacked(...));
+  address signingAddress = ecrecover(messageHash, v, r, s);
+  require(identityRegistry.isAddressFor(ein, signingAddress));
+
+  performLogic(ein, ...);
+}
+```
+
+This solution has one big drawback. Recovering the address from the signature, and checking that it belongs to the passed `EIN` only works for signatures of the specific form above. It notably does not work for signatures prefixed with the somewhat-standard `\x19Ethereum Signed Message:\n32`. So, this method cannot be agnostic between prefixed and un-prefixed signatures unless it recovers 2 addresses and checks that either one belongs to the `EIN`, which is somewhat unwieldy. For more information see [SignatureReplayAttacks.md](./SignatureReplayAttacks.md).
+
+#### Both
 To be extra safe, one could pass both the `EIN` and the `approvingAddress`.
 
 ```solidity

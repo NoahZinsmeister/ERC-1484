@@ -216,7 +216,8 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       await instances.Resolver.getEmail(100)
         .then(() => assert.fail('email address was read', 'transaction should fail'))
         .catch(error => assert.include(
-          error.message, 'The referenced identity does not exist.', 'wrong rejection reason'
+          // error.message, 'The referenced identity does not exist.', 'wrong rejection reason'
+          error.message, 'revert', 'wrong rejection reason'
         ))
     })
   })

@@ -1,5 +1,6 @@
 module.exports = {
-    compileCommand: 'npm run build',
-    testCommand: 'npm run test-cover',
-    norpc: true,
+  skipFiles: ['_testing/'],
+  compileCommand: 'npm run build',
+  testCommand: 'npm run test-cover',
+  norpc: true,
 }

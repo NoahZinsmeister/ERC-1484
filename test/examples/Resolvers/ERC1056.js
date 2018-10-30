@@ -66,6 +66,68 @@ contract('Testing ERC1056 Resolver', function (accounts) {
     })
   })
 
+  describe('initialize FAIL', async () => {
+    it('already initialized', async function () {
+      const user = users[0]
+
+      const initializePermission = web3.utils.soliditySha3(
+        { t: 'bytes1', v: '0x19' },
+        { t: 'bytes1', v: '0' },
+        instances.EthereumDIDRegistry.address,
+        0,
+        user.address,
+        'changeOwner',
+        instances.ERC1056.address
+      )
+
+      const permission = await sign(initializePermission, user.address, user.private, 'unprefixed')
+
+      await instances.ERC1056.initialize(user.address, permission.v, permission.r, permission.s, { from: user.address })
+        .then(() => assert.fail('able to initialize', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'This EIN has already been initialized', 'wrong rejection reason'
+        ))
+    })
+  })
+
+  describe('change owner', async () => {
+    const user = users[0]
+
+    it('change owner', async function () {
+      await instances.ERC1056.changeOwner(instances.ERC1056.address, { from:  user.address })
+    })
+
+    it('change owner signed', async function () {
+      let nonce = await instances.ERC1056.actionNonce(user.identity)
+
+      const permission = web3.utils.soliditySha3(
+        'changeOwnerDelegated',
+        instances.ERC1056.address,
+        nonce
+      )
+
+      const signature = await sign(permission, user.address, user.private, 'unprefixed')
+
+      await instances.ERC1056.changeOwnerDelegated(instances.ERC1056.address, signature.v, signature.r, signature.s, user.address, { from:  user.address })
+    })
+
+    it('change owner signed FAIL', async function () {
+      const permission = web3.utils.soliditySha3(
+        'changeOwnerDelegated',
+        instances.ERC1056.address,
+        10000
+      )
+
+      const signature = await sign(permission, user.address, user.private, 'unprefixed')
+
+      await instances.ERC1056.changeOwnerDelegated(instances.ERC1056.address, signature.v, signature.r, signature.s, user.address, { from:  user.address })
+        .then(() => assert.fail('able to initialize', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Function execution is incorrectly signed.', 'wrong rejection reason'
+        ))
+    })
+  })
+
   describe('delegates normal', async () => {
     const user = users[0]
     const delegate = users[1]
@@ -101,6 +163,24 @@ contract('Testing ERC1056 Resolver', function (accounts) {
       await instances.ERC1056.addDelegateDelegated(randomBytes, delegate.address, 100000, signature.v, signature.r, signature.s, user.address, { from: user.address })
     })
 
+    it('add delegate signed FAIL', async function () {
+      const permission = web3.utils.soliditySha3(
+        'addDelegateDelegated',
+        { t: 'bytes32', v: randomBytes },
+        delegate.address,
+        100000,
+        10000
+      )
+
+      const signature = await sign(permission, user.address, user.private, 'unprefixed')
+
+      await instances.ERC1056.addDelegateDelegated(randomBytes, delegate.address, 100000, signature.v, signature.r, signature.s, user.address, { from: user.address })
+        .then(() => assert.fail('able to initialize', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Function execution is incorrectly signed.', 'wrong rejection reason'
+        ))
+    })
+
     it('revoke delegate signed', async function () {
       let nonce = await instances.ERC1056.actionNonce(user.identity)
 
@@ -117,7 +197,24 @@ contract('Testing ERC1056 Resolver', function (accounts) {
 
       nonce = await instances.ERC1056.actionNonce(user.identity)
 
-      assert.equal(nonce.valueOf(), 2)
+      assert.equal(nonce.valueOf(), 3)
+    })
+
+    it('revoke delegate signed FAIL', async function () {
+      const permission = web3.utils.soliditySha3(
+        'revokeDelegateDelegated',
+        { t: 'bytes32', v: randomBytes },
+        delegate.address,
+        10000
+      )
+
+      const signature = await sign(permission, user.address, user.private, 'unprefixed')
+
+      await instances.ERC1056.revokeDelegateDelegated(randomBytes, delegate.address, signature.v, signature.r, signature.s, user.address, { from: user.address })
+        .then(() => assert.fail('able to initialize', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Function execution is incorrectly signed.', 'wrong rejection reason'
+        ))
     })
   })
 
@@ -156,6 +253,24 @@ contract('Testing ERC1056 Resolver', function (accounts) {
       await instances.ERC1056.setAttributeDelegated(name, value, 100000, signature.v, signature.r, signature.s, user.address, { from: user.address })
     })
 
+    it('set attribute signed FAIL', async function () {
+      const permission = web3.utils.soliditySha3(
+        'setAttributeDelegated',
+        { t: 'bytes32', v: name },
+        { t: 'bytes', v: value },
+        100000,
+        100000
+      )
+
+      const signature = await sign(permission, user.address, user.private, 'unprefixed')
+
+      await instances.ERC1056.setAttributeDelegated(name, value, 100000, signature.v, signature.r, signature.s, user.address, { from: user.address })
+        .then(() => assert.fail('able to initialize', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Function execution is incorrectly signed.', 'wrong rejection reason'
+        ))
+    })
+
     it('revoke attribute signed', async function () {
       let nonce = await instances.ERC1056.actionNonce(user.identity)
 
@@ -172,7 +287,25 @@ contract('Testing ERC1056 Resolver', function (accounts) {
 
       nonce = await instances.ERC1056.actionNonce(user.identity)
 
-      assert.equal(nonce.valueOf(), 4)
+      assert.equal(nonce.valueOf(), 5)
     })
+
+    it('revoke attribute signed FAIL', async function () {
+      const permission = web3.utils.soliditySha3(
+        'revokeAttributeDelegated',
+        { t: 'bytes32', v: name },
+        { t: 'bytes', v: value },
+        10000
+      )
+
+      const signature = await sign(permission, user.address, user.private, 'unprefixed')
+
+      await instances.ERC1056.revokeAttributeDelegated(name, value, signature.v, signature.r, signature.s, user.address, { from: user.address })
+        .then(() => assert.fail('able to initialize', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Function execution is incorrectly signed.', 'wrong rejection reason'
+        ))
+    })
+
   })
 })

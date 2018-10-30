@@ -10,7 +10,7 @@ interface IdentityRegistryInterface {
       returns (address recoveryAddress, address[] associatedAddresses, address[] providers, address[] resolvers);
 }
 
-interface EthereumDIDRegistry {
+interface EthereumDIDRegistryInterface {
     function identityOwner(address identity) external view returns(address);
     function validDelegate(address identity, bytes32 delegateType, address delegate) external view returns(bool);
     function changeOwner(address identity, address newOwner) external;
@@ -23,11 +23,11 @@ interface EthereumDIDRegistry {
 
 contract ERC1056 {
     IdentityRegistryInterface identityRegistry;
-    EthereumDIDRegistry ethereumDIDRegistry;
+    EthereumDIDRegistryInterface ethereumDIDRegistry;
 
     constructor (address identityRegistryAddress, address ethereumDIDRegistryAddress) public {
         identityRegistry = IdentityRegistryInterface(identityRegistryAddress);
-        ethereumDIDRegistry = EthereumDIDRegistry(ethereumDIDRegistryAddress);
+        ethereumDIDRegistry = EthereumDIDRegistryInterface(ethereumDIDRegistryAddress);
     }
 
     mapping(uint => address) public einToDID;

@@ -55,19 +55,19 @@ contract('Testing Identity', function (accounts) {
       }
     })
 
-    it('Identity can be minted', async function () {
-      // test user minting
-      const mintedIdentity = await instances.IdentityRegistry.mintIdentity.call(
+    it('Identity can be created', async function () {
+      // test user creation
+      const createdIdentity = await instances.IdentityRegistry.createIdentity.call(
         identity.recoveryAddress.address, identity.providers[0].address, [],
         { from: identity.associatedAddresses[0].address }
       )
-      assert.isTrue(mintedIdentity.eq(web3.utils.toBN(1)), 'Unexpected identity token user')
+      assert.isTrue(createdIdentity.eq(web3.utils.toBN(1)), 'Unexpected identity token user')
 
-      // test delegated minting
+      // test delegated creation
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
-        'I authorize an Identity to be minted on my behalf.',
-        instances.IdentityRegistry.address,
+        '0x19', '0x00', instances.IdentityRegistry.address,
+        'I authorize the creation of an Identity on my behalf.',
         identity.recoveryAddress.address,
         identity.associatedAddresses[0].address,
         identity.providers[0].address,
@@ -77,16 +77,16 @@ contract('Testing Identity', function (accounts) {
       const permission = await sign(
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
-      const mintedIdentityDelegated = await instances.IdentityRegistry.mintIdentityDelegated.call(
+      const createdIdentityDelegated = await instances.IdentityRegistry.createIdentityDelegated.call(
         identity.recoveryAddress.address, identity.associatedAddresses[0].address, [],
         permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
-      assert.isTrue(mintedIdentityDelegated.eq(web3.utils.toBN(1)), 'Unexpected identity token delegated')
+      assert.isTrue(createdIdentityDelegated.eq(web3.utils.toBN(1)), 'Unexpected identity token delegated')
     })
 
-    it('Identity minted', async function () {
-      await instances.IdentityRegistry.mintIdentity(
+    it('Identity created', async function () {
+      await instances.IdentityRegistry.createIdentity(
         identity.recoveryAddress.address, identity.providers[0].address, [],
         { from: identity.associatedAddresses[0].address }
       )
@@ -105,16 +105,16 @@ contract('Testing Identity', function (accounts) {
       for (const address of [identity.associatedAddresses[1], identity.associatedAddresses[2], accountsPrivate[5]]) {
         const timestamp = Math.round(new Date() / 1000) - 1
         const permissionStringApproving = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
           'I authorize adding this address to my Identity.',
-          instances.IdentityRegistry.address,
           identity.identity,
           address.address,
           timestamp
         )
 
         const permissionString = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
           'I authorize being added to this Identity.',
-          instances.IdentityRegistry.address,
           identity.identity,
           address.address,
           timestamp
@@ -125,7 +125,7 @@ contract('Testing Identity', function (accounts) {
         )
         const permission = await sign(permissionString, address.address, address.private)
 
-        await instances.IdentityRegistry.addAddress(
+        await instances.IdentityRegistry.addAddressDelegated(
           identity.associatedAddresses[0].address, address.address,
           [permissionApproving.v, permission.v],
           [permissionApproving.r, permission.r],
@@ -157,8 +157,8 @@ contract('Testing Identity', function (accounts) {
       const address = accountsPrivate[5]
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
         'I authorize removing this address from my Identity.',
-        instances.IdentityRegistry.address,
         identity.identity,
         address.address,
         timestamp
@@ -166,7 +166,7 @@ contract('Testing Identity', function (accounts) {
 
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.IdentityRegistry.removeAddress(
+      await instances.IdentityRegistry.removeAddressDelegated(
         address.address, permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
@@ -189,7 +189,7 @@ contract('Testing Identity', function (accounts) {
         )
       }))
 
-      await instances.IdentityRegistry.addProviders(
+      await instances.IdentityRegistry.addProvidersFor(
         identity.identity, [provider.address], { from: identity.providers[0].address }
       )
 
@@ -211,7 +211,7 @@ contract('Testing Identity', function (accounts) {
         )
       }))
 
-      await instances.IdentityRegistry.removeProviders(
+      await instances.IdentityRegistry.removeProvidersFor(
         identity.identity, [provider.address], { from: identity.providers[0].address }
       )
 
@@ -226,7 +226,7 @@ contract('Testing Identity', function (accounts) {
     it('provider can add resolvers', async function () {
       const resolver = accountsPrivate[7]
 
-      await instances.IdentityRegistry.addResolvers(
+      await instances.IdentityRegistry.addResolversFor(
         identity.identity, [resolver.address],
         { from: identity.providers[0].address }
       )
@@ -242,7 +242,7 @@ contract('Testing Identity', function (accounts) {
     it('provider can remove resolvers', async function () {
       const resolver = accountsPrivate[7]
 
-      await instances.IdentityRegistry.removeResolvers(
+      await instances.IdentityRegistry.removeResolversFor(
         identity.identity,
         [resolver.address],
         { from: identity.providers[0].address }
@@ -258,10 +258,10 @@ contract('Testing Identity', function (accounts) {
   })
 
   describe('Testing Recovery Process', function () {
-    it('Can initiate change in recovery address', async function () {
+    it('Can trigger change in recovery address', async function () {
       newRecoveryAddress = accountsPrivate[8]
 
-      await instances.IdentityRegistry.initiateRecoveryAddressChange(
+      await instances.IdentityRegistry.triggerRecoveryAddressChangeFor(
         identity.identity, newRecoveryAddress.address, { from: identity.providers[0].address }
       )
 
@@ -284,15 +284,17 @@ contract('Testing Identity', function (accounts) {
       timestamp = Math.round(new Date() / 1000) - 1
       futureTimestamp = timestamp + twoWeeks
       const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
         'I authorize being added to this Identity via recovery.',
-        instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, timestamp
+        identity.identity, newAssociatedAddress.address, timestamp
       )
       newAssociatedAddressPermission = await sign(
         permissionString, newAssociatedAddress.address, newAssociatedAddress.private
       )
       const futurePermissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
         'I authorize being added to this Identity via recovery.',
-        instances.IdentityRegistry.address, identity.identity, newAssociatedAddress.address, futureTimestamp
+        identity.identity, newAssociatedAddress.address, futureTimestamp
       )
       futureNewAssociatedAddressPermission = await sign(
         futurePermissionString, newAssociatedAddress.address, newAssociatedAddress.private
@@ -305,17 +307,17 @@ contract('Testing Identity', function (accounts) {
       )
         .then(() => assert.fail('new recovery address triggered recovery', 'transaction should fail'))
         .catch(error => assert.include(
-          error.message, 'Only the recently removed recovery address can initiate a recovery.', 'wrong rejection reason'
+          error.message, 'Only the recently removed recovery address can trigger recovery.', 'wrong rejection reason'
         ))
     })
 
-    it('Cannot initiate another change in recovery address yet', async function () {
-      await instances.IdentityRegistry.initiateRecoveryAddressChange(
+    it('Cannot trigger another change in recovery address yet', async function () {
+      await instances.IdentityRegistry.triggerRecoveryAddressChangeFor(
         identity.identity, identity.recoveryAddress.address, { from: identity.providers[0].address }
       )
         .then(() => assert.fail('able to change recovery address', 'transaction should fail'))
         .catch(error => assert.include(
-          error.message, 'Pending change of recovery address has not timed out.', 'wrong rejection reason'
+          error.message, 'Cannot trigger a change in recovery address yet', 'wrong rejection reason'
         ))
     })
 
@@ -330,12 +332,12 @@ contract('Testing Identity', function (accounts) {
       )
         .then(() => assert.fail('old recovery address triggered recovery', 'transaction should fail'))
         .catch(error => assert.include(
-          error.message, 'Only the current recovery address can initiate a recovery.', 'wrong rejection reason'
+          error.message, 'Only the current recovery address can trigger recovery.', 'wrong rejection reason'
         ))
     })
 
-    it('Can initiate another change in recovery address', async function () {
-      await instances.IdentityRegistry.initiateRecoveryAddressChange(
+    it('Can trigger another change in recovery address', async function () {
+      await instances.IdentityRegistry.triggerRecoveryAddressChangeFor(
         identity.identity, identity.recoveryAddress.address, { from: identity.providers[0].address }
       )
 

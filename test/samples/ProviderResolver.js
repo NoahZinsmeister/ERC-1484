@@ -42,11 +42,11 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
   })
 
   describe('Testing Provider', function () {
-    it('Identity can be minted', async function () {
+    it('Identity can be created', async function () {
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
-        'I authorize an Identity to be minted on my behalf.',
-        instances.IdentityRegistry.address,
+        '0x19', '0x00', instances.IdentityRegistry.address,
+        'I authorize the creation of an Identity on my behalf.',
         identity.recoveryAddress.address,
         identity.associatedAddresses[0].address,
         instances.Provider.address,
@@ -56,7 +56,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       const permission = await sign(
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
-      await instances.Provider.mintIdentityDelegated(
+      await instances.Provider.createIdentityDelegated(
         identity.recoveryAddress.address, identity.associatedAddresses[0].address, [identity.resolver],
         permission.v, permission.r, permission.s, timestamp
       )
@@ -74,16 +74,16 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       const address = identity.associatedAddresses[1]
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionStringApproving = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
         'I authorize adding this address to my Identity.',
-        instances.IdentityRegistry.address,
         identity.identity,
         address.address,
         timestamp
       )
 
       const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
         'I authorize being added to this Identity.',
-        instances.IdentityRegistry.address,
         identity.identity,
         address.address,
         timestamp
@@ -94,7 +94,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       )
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.Provider.addAddress(
+      await instances.Provider.addAddressDelegated(
         identity.associatedAddresses[0].address, address.address,
         [permissionApproving.v, permission.v],
         [permissionApproving.r, permission.r],
@@ -114,8 +114,8 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       const address = identity.associatedAddresses[1]
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
         'I authorize removing this address from my Identity.',
-        instances.IdentityRegistry.address,
         identity.identity,
         address.address,
         timestamp
@@ -123,7 +123,9 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
 
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.Provider.removeAddress(address.address, permission.v, permission.r, permission.s, timestamp)
+      await instances.Provider.removeAddressDelegated(
+        address.address, permission.v, permission.r, permission.s, timestamp
+      )
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {
         recoveryAddress:     identity.recoveryAddress.address,
@@ -134,7 +136,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     })
 
     it('can add a provider', async function () {
-      await instances.Provider.addProviders(
+      await instances.Provider.addProvidersFor(
         accounts.slice(-1), { from: identity.associatedAddresses[0].address }
       )
 
@@ -147,7 +149,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     })
 
     it('identity can remove a provider', async function () {
-      await instances.Provider.removeProviders(
+      await instances.Provider.removeProvidersFor(
         accounts.slice(-1), { from: identity.associatedAddresses[0].address }
       )
 
@@ -160,7 +162,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     })
 
     it('provider can remove resolvers', async function () {
-      await instances.Provider.removeResolvers(
+      await instances.Provider.removeResolversFor(
         [identity.resolver],
         { from: identity.associatedAddresses[0].address }
       )
@@ -173,8 +175,8 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       })
     })
 
-    it('provider can initiate recovery address change', async function () {
-      await instances.Provider.initiateRecoveryAddressChange(
+    it('provider can trigger recovery address change', async function () {
+      await instances.Provider.triggerRecoveryAddressChangeFor(
         accounts.slice(-1)[0],
         { from: identity.associatedAddresses[0].address }
       )
@@ -201,7 +203,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     })
 
     it('once added, email address can be set and read', async function () {
-      await instances.Provider.addResolvers(
+      await instances.Provider.addResolversFor(
         [identity.resolver],
         { from: identity.associatedAddresses[0].address }
       )

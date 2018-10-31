@@ -1,13 +1,13 @@
 pragma solidity ^0.4.24;
 
 interface IdentityRegistryInterface {
-    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s)
-        external view returns (bool);
-    function mintIdentityDelegated(
-        address recoveryAddress,
-        address associatedAddress,
-        address[] resolvers,
-        uint8 v, bytes32 r, bytes32 s) external returns (uint ein);
+    function isSigned(
+        address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s
+    ) external view returns (bool);
+    function createIdentityDelegated(
+        address recoveryAddress, address associatedAddress, address[] resolvers,
+        uint8 v, bytes32 r, bytes32 s, uint timestamp
+    ) external returns (uint ein);
     function getEIN(address _address) external view returns (uint ein);
     function isProviderFor(uint ein, address provider) external view returns (bool);
 }
@@ -42,10 +42,10 @@ contract ExternalProxy is Forwarder {
     }
 }
 
-contract MetaTransactionProxyProvider is Forwarder {
+contract MetaTransactionsProvider is Forwarder {
     IdentityRegistryInterface identityRegistry;
 
-    // identity proxy registry and nonce tracker mapping EINs to proxies/nonces
+    // external proxy registry and nonce tracker mapping EINs to proxies/nonces
     mapping (uint => address) public externalProxyDirectory;
     mapping (uint => uint) public nonceTracker;
 
@@ -64,18 +64,20 @@ contract MetaTransactionProxyProvider is Forwarder {
     }
     
 
-    // mint identity with meta-transaction
-    function mintIdentityDelegated(
-        address recoveryAddress, address associatedAddress, address[] resolvers, uint8 v, bytes32 r, bytes32 s
+    // create identity with meta-transaction
+    function createIdentityDelegated(
+        address recoveryAddress, address associatedAddress, address[] resolvers,
+        uint8 v, bytes32 r, bytes32 s, uint timestamp
     )
         public returns (uint ein)
     {
-        return identityRegistry.mintIdentityDelegated(recoveryAddress, associatedAddress, resolvers, v, r, s);
+        return identityRegistry.createIdentityDelegated(
+            recoveryAddress, associatedAddress, resolvers, v, r, s, timestamp
+        );
     }
 
     // internal logic for claiming an external proxy
     function claimProxy(uint ein) private {
-        require(!hasExternalProxy(ein), "External Proxy already claimed.");
         address externalProxy = new ExternalProxy(ein, address(this));
 
         // register proxy in the directoy
@@ -88,8 +90,8 @@ contract MetaTransactionProxyProvider is Forwarder {
     }
 
     // call via proxy from approvingAddress with meta-transaction
-    function callViaProxy(
-        address approvingAddress, uint8 v, bytes32 r, bytes32 s, address destination, bytes data, bool viaExternal
+    function callViaProxyDelegated(
+        address approvingAddress, address destination, bytes data, bool viaExternal, uint8 v, bytes32 r, bytes32 s
     )
         public
     {
@@ -97,7 +99,12 @@ contract MetaTransactionProxyProvider is Forwarder {
         require(
             identityRegistry.isSigned(
                 approvingAddress,
-                keccak256(abi.encodePacked("Call", address(this), ein, destination, data, nonceTracker[ein])),
+                keccak256(
+                    abi.encodePacked(
+                        byte(0x19), byte(0), address(this),
+                        "I authorize this call.", ein, destination, data, viaExternal, nonceTracker[ein]
+                    )
+                ),
                 v, r, s
             ),
             "Permission denied."

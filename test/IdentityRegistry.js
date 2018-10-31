@@ -1,7 +1,7 @@
 const Web3 = require('web3')
 const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
 
-const { sign, verifyIdentity, timeTravel } = require('./common')
+const { sign, verifyIdentity, timeTravel, defaultErrorMessage } = require('./common')
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
 
@@ -46,19 +46,26 @@ contract('Testing Identity', function (accounts) {
     it('_hasIdentity FAIL', async function () {
       await instances.IdentityRegistry.getEIN(accountsPrivate[0].address)
         .then(() => assert.fail('got an EIN', 'transaction should fail'))
-        .catch(error => assert.include(
-          error.message, 'The passed address does not have an identity.', 'wrong rejection reason'
-        ))
+        .catch(error => {
+          if (error.message !== defaultErrorMessage) {
+            assert.include(
+              error.message, 'The passed address does not have an identity.', 'wrong rejection reason'
+            )
+          }
+        })
     })
 
     it('_identityExists FAIL', async function () {
       await instances.IdentityRegistry.getIdentity(1337)
         .then(() => assert.fail('got an Identity', 'transaction should fail'))
-        .catch(error => assert.include(
-          error.message, 'The identity does not exist.', 'wrong rejection reason'
-        ))
+        .catch(error => {
+          if (error.message !== defaultErrorMessage) {
+            assert.include(
+              error.message, 'The identity does not exist.', 'wrong rejection reason'
+            )
+          }
+        })
     })
-
   })
 
   describe('Testing Identity Registry', function () {
@@ -126,9 +133,13 @@ contract('Testing Identity', function (accounts) {
         { from: identity.providers[0].address }
       )
         .then(() => assert.fail('able to mint', 'transaction should fail'))
-        .catch(error => assert.include(
-          error.message, 'Timestamp is not valid.', 'wrong rejection reason'
-        ))
+        .catch(error => {
+          if (error.message !== defaultErrorMessage) {
+            assert.include(
+              error.message, 'Timestamp is not valid.', 'wrong rejection reason'
+            )
+          }
+        })
     })
 
     it('Identity can be created FAIL -- signature', async function () {
@@ -152,9 +163,13 @@ contract('Testing Identity', function (accounts) {
         { from: identity.providers[0].address }
       )
         .then(() => assert.fail('able to mint', 'transaction should fail'))
-        .catch(error => assert.include(
-          error.message, 'Permission denied.', 'wrong rejection reason'
-        ))
+        .catch(error => {
+          if (error.message !== defaultErrorMessage) {
+            assert.include(
+              error.message, 'Permission denied.', 'wrong rejection reason'
+            )
+          }
+        })
     })
 
     it('Identity created', async function () {
@@ -606,7 +621,6 @@ contract('Testing Identity', function (accounts) {
         resolvers:           []
       })
     })
-
   })
 
   describe('Testing Poison Pill', function () {

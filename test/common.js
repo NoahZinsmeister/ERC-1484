@@ -2,6 +2,8 @@ const Web3 = require('web3')
 const ethUtil = require('ethereumjs-util')
 const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
 
+const defaultErrorMessage = 'Returned error: VM Exception while processing transaction: revert'
+
 function sign (messageHash, address, privateKey, method) {
   return new Promise(resolve => {
     if (method === 'unprefixed') {
@@ -77,5 +79,6 @@ async function verifyIdentity (ein, IdentityRegistry, expectedIdentity) {
 module.exports = {
   sign: sign,
   timeTravel: timeTravel,
-  verifyIdentity: verifyIdentity
+  verifyIdentity: verifyIdentity,
+  defaultErrorMessage: defaultErrorMessage
 }

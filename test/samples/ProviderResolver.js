@@ -1,7 +1,7 @@
 const Web3 = require('web3')
 const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
 
-const { sign, verifyIdentity } = require('../common')
+const { sign, verifyIdentity, defaultErrorMessage } = require('../common')
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
 const Provider = artifacts.require('./samples/Provider.sol')
@@ -217,10 +217,13 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
     it('cannot access email addresses for non-existent EINs', async function () {
       await instances.Resolver.getEmail(100)
         .then(() => assert.fail('email address was read', 'transaction should fail'))
-        .catch(error => assert.include(
-          // error.message, 'The referenced identity does not exist.', 'wrong rejection reason'
-          error.message, 'revert', 'wrong rejection reason'
-        ))
+        .catch(error => {
+          if (error.message !== defaultErrorMessage) {
+            assert.include(
+              error.message, 'The referenced identity does not exist.', 'wrong rejection reason'
+            )
+          }
+        })
     })
   })
 })

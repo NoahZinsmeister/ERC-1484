@@ -41,6 +41,26 @@ contract('Testing Identity', function (accounts) {
     })
   })
 
+  // The modifiers are hit and pass many times in the future
+  describe('Modifier FAIL Tests', function () {
+    it('_hasIdentity FAIL', async function () {
+      await instances.IdentityRegistry.getEIN(accountsPrivate[0].address)
+        .then(() => assert.fail('got an EIN', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'The passed address does not have an identity.', 'wrong rejection reason'
+        ))
+    })
+
+    it('_identityExists FAIL', async function () {
+      await instances.IdentityRegistry.getIdentity(1337)
+        .then(() => assert.fail('got an Identity', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'The identity does not exist.', 'wrong rejection reason'
+        ))
+    })
+
+  })
+
   describe('Testing Identity Registry', function () {
     it('Signatures verify correctly', async function () {
       let messageHash = web3.utils.soliditySha3('shh')
@@ -85,6 +105,58 @@ contract('Testing Identity', function (accounts) {
       assert.isTrue(createdIdentityDelegated.eq(web3.utils.toBN(1)), 'Unexpected identity token delegated')
     })
 
+    it('Identity can be created FAIL -- timestamp', async function () {
+      // test delegated creation
+      const timestamp = Math.round(new Date() / 1000) + 1000
+      const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
+        'I authorize the creation of an Identity on my behalf.',
+        identity.recoveryAddress.address,
+        identity.associatedAddresses[0].address,
+        identity.providers[0].address,
+        { t: 'address[]', v: [] },
+        timestamp
+      )
+      const permission = await sign(
+        permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
+      )
+      await instances.IdentityRegistry.createIdentityDelegated.call(
+        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [],
+        permission.v, permission.r, permission.s, timestamp,
+        { from: identity.providers[0].address }
+      )
+        .then(() => assert.fail('able to mint', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Timestamp is not valid.', 'wrong rejection reason'
+        ))
+    })
+
+    it('Identity can be created FAIL -- signature', async function () {
+      // test delegated creation
+      const timestamp = Math.round(new Date() / 1000) - 1
+      const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
+        'Hydro rules!!!',
+        identity.recoveryAddress.address,
+        identity.associatedAddresses[0].address,
+        identity.providers[0].address,
+        { t: 'address[]', v: [] },
+        timestamp
+      )
+      const permission = await sign(
+        permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
+      )
+      await instances.IdentityRegistry.createIdentityDelegated.call(
+        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [],
+        permission.v, permission.r, permission.s, timestamp,
+        { from: identity.providers[0].address }
+      )
+        .then(() => assert.fail('able to mint', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Permission denied.', 'wrong rejection reason'
+        ))
+    })
+
     it('Identity created', async function () {
       await instances.IdentityRegistry.createIdentity(
         identity.recoveryAddress.address, identity.providers[0].address, [],
@@ -99,6 +171,123 @@ contract('Testing Identity', function (accounts) {
         providers:           identity.providers.map(provider => provider.address),
         resolvers:           []
       })
+    })
+
+    it('provider can add other addresses FAIL -- not a provider', async function () {
+      for (const address of [identity.associatedAddresses[1], identity.associatedAddresses[2], accountsPrivate[5]]) {
+        const timestamp = Math.round(new Date() / 1000) - 1
+        const permissionStringApproving = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
+          'I authorize adding this address to my Identity.',
+          identity.identity,
+          address.address,
+          timestamp
+        )
+
+        const permissionString = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
+          'I authorize being added to this Identity.',
+          identity.identity,
+          address.address,
+          timestamp
+        )
+
+        const permissionApproving = await sign(
+          permissionStringApproving, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
+        )
+        const permission = await sign(permissionString, address.address, address.private)
+
+        await instances.IdentityRegistry.addAddressDelegated(
+          identity.associatedAddresses[0].address, address.address,
+          [permissionApproving.v, permission.v],
+          [permissionApproving.r, permission.r],
+          [permissionApproving.s, permission.s],
+          [timestamp, timestamp],
+          { from: accountsPrivate[8].address }
+        )
+          .then(() => assert.fail('able to set address', 'transaction should fail'))
+          .catch(error => assert.include(
+            error.message, 'The identity has not set the passed provider.', 'wrong rejection reason'
+          ))
+      }
+    })
+
+    it('provider can add other addresses FAIL -- approving signature', async function () {
+      for (const address of [identity.associatedAddresses[1], identity.associatedAddresses[2], accountsPrivate[5]]) {
+        const timestamp = Math.round(new Date() / 1000) - 1
+        const permissionStringApproving = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
+          'Hydro rules!!!',
+          identity.identity,
+          address.address,
+          timestamp
+        )
+
+        const permissionString = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
+          'I authorize being added to this Identity.',
+          identity.identity,
+          address.address,
+          timestamp
+        )
+
+        const permissionApproving = await sign(
+          permissionStringApproving, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
+        )
+        const permission = await sign(permissionString, address.address, address.private)
+
+        await instances.IdentityRegistry.addAddressDelegated(
+          identity.associatedAddresses[0].address, address.address,
+          [permissionApproving.v, permission.v],
+          [permissionApproving.r, permission.r],
+          [permissionApproving.s, permission.s],
+          [timestamp, timestamp],
+          { from: identity.providers[0].address }
+        )
+          .then(() => assert.fail('able to set address', 'transaction should fail'))
+          .catch(error => assert.include(
+            error.message, 'Permission denied from approving address.', 'wrong rejection reason'
+          ))
+      }
+    })
+
+    it('provider can add other addresses FAIL -- adding signature', async function () {
+      for (const address of [identity.associatedAddresses[1], identity.associatedAddresses[2], accountsPrivate[5]]) {
+        const timestamp = Math.round(new Date() / 1000) - 1
+        const permissionStringApproving = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
+          'I authorize adding this address to my Identity.',
+          identity.identity,
+          address.address,
+          timestamp
+        )
+
+        const permissionString = web3.utils.soliditySha3(
+          '0x19', '0x00', instances.IdentityRegistry.address,
+          'Hydro rules!!!',
+          identity.identity,
+          address.address,
+          timestamp
+        )
+
+        const permissionApproving = await sign(
+          permissionStringApproving, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
+        )
+        const permission = await sign(permissionString, address.address, address.private)
+
+        await instances.IdentityRegistry.addAddressDelegated(
+          identity.associatedAddresses[0].address, address.address,
+          [permissionApproving.v, permission.v],
+          [permissionApproving.r, permission.r],
+          [permissionApproving.s, permission.s],
+          [timestamp, timestamp],
+          { from: identity.providers[0].address }
+        )
+          .then(() => assert.fail('able to set address', 'transaction should fail'))
+          .catch(error => assert.include(
+            error.message, 'Permission denied from address to add.', 'wrong rejection reason'
+          ))
+      }
     })
 
     it('provider can add other addresses', async function () {
@@ -151,6 +340,52 @@ contract('Testing Identity', function (accounts) {
           resolvers:           []
         })
       }
+    })
+
+    it('provider can remove addresses -- not provider', async function () {
+      const address = accountsPrivate[5]
+      const timestamp = Math.round(new Date() / 1000) - 1
+      const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
+        'I authorize removing this address from my Identity.',
+        identity.identity,
+        address.address,
+        timestamp
+      )
+
+      const permission = await sign(permissionString, address.address, address.private)
+
+      await instances.IdentityRegistry.removeAddressDelegated(
+        address.address, permission.v, permission.r, permission.s, timestamp,
+        { from: accountsPrivate[8].address }
+      )
+        .then(() => assert.fail('able to remove address', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'The identity has not set the passed provider.', 'wrong rejection reason'
+        ))
+    })
+
+    it('provider can remove addresses -- signature', async function () {
+      const address = accountsPrivate[5]
+      const timestamp = Math.round(new Date() / 1000) - 1
+      const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
+        'Hydro rules!!!',
+        identity.identity,
+        address.address,
+        timestamp
+      )
+
+      const permission = await sign(permissionString, address.address, address.private)
+
+      await instances.IdentityRegistry.removeAddressDelegated(
+        address.address, permission.v, permission.r, permission.s, timestamp,
+        { from: identity.providers[0].address }
+      )
+        .then(() => assert.fail('able to remove address', 'transaction should fail'))
+        .catch(error => assert.include(
+          error.message, 'Permission denied.', 'wrong rejection reason'
+        ))
     })
 
     it('provider can remove addresses', async function () {
@@ -258,6 +493,13 @@ contract('Testing Identity', function (accounts) {
   })
 
   describe('Testing Recovery Process', function () {
+    let newAssociatedAddress
+    let newAssociatedAddressPermission
+    let timestamp
+    let futureTimestamp
+    let futureNewAssociatedAddressPermission
+    const twoWeeks = 60 * 60 * 24 * 14
+
     it('Can trigger change in recovery address', async function () {
       newRecoveryAddress = accountsPrivate[8]
 
@@ -273,12 +515,6 @@ contract('Testing Identity', function (accounts) {
       })
     })
 
-    let newAssociatedAddress
-    let newAssociatedAddressPermission
-    let timestamp
-    let futureTimestamp
-    let futureNewAssociatedAddressPermission
-    const twoWeeks = 60 * 60 * 24 * 14
     it('New recovery address cannot trigger recovery', async function () {
       newAssociatedAddress = accountsPrivate[9]
       timestamp = Math.round(new Date() / 1000) - 1
@@ -370,6 +606,7 @@ contract('Testing Identity', function (accounts) {
         resolvers:           []
       })
     })
+
   })
 
   describe('Testing Poison Pill', function () {

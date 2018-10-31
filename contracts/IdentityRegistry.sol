@@ -1,35 +1,16 @@
 pragma solidity ^0.4.24;
 
+import "./SignatureVerifier.sol";
 import "./AddressSet/AddressSet.sol";
 
-
-contract SignatureVerifier {
-    // checks if the provided (v, r, s) signature of messageHash was created by the private key associated with _address
-    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s) public pure returns (bool) {
-        return _isSigned(_address, messageHash, v, r, s) || _isSignedPrefixed(_address, messageHash, v, r, s);
-    }
-
-    // checks unprefixed signatures
-    function _isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s)
-        private pure returns (bool)
-    {
-        return ecrecover(messageHash, v, r, s) == _address;
-    }
-
-    // checks prefixed signatures
-    function _isSignedPrefixed(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s)
-        private pure returns (bool)
-    {
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        return _isSigned(_address, keccak256(abi.encodePacked(prefix, messageHash)), v, r, s);
-    }
-}
-
-
+/// @title The ERC-1484 Identity Registry.
+/// @author Noah Zinsmeister
+/// @author Andy Chorlian
 contract IdentityRegistry is SignatureVerifier {
     using AddressSet for AddressSet.Set;
 
-    // define identity data structure and mappings
+
+    // Identity Data Structure and Parameters //////////////////////////////////////////////////////////////////////////
     struct Identity {
         address recoveryAddress;
         AddressSet.Set associatedAddresses;
@@ -37,13 +18,18 @@ contract IdentityRegistry is SignatureVerifier {
         AddressSet.Set resolvers;
     }
 
-    uint public nextEIN = 1;
     mapping (uint => Identity) private identityDirectory;
     mapping (address => uint) private associatedAddressDirectory;
 
-    // define signature timeout variables/data structures/modifiers
+    uint public nextEIN = 1;
+    uint public maxAssociatedAddresses = 25;
+
+
+    // Signature Timeout ///////////////////////////////////////////////////////////////////////////////////////////////
     uint public signatureTimeout = 1 days;
 
+    /// @dev Enforces that the passed timestamp is within signatureTimeout seconds of now.
+    /// @param timestamp The timestamp to check the validity of.
     modifier ensureSignatureTimeValid(uint timestamp) {
         require(
             // solium-disable-next-line security/no-block-members
@@ -52,72 +38,91 @@ contract IdentityRegistry is SignatureVerifier {
         _;
     }
 
-    // define recovery and poison pill variables/data structures/modifiers
-    uint public recoveryTimeout = 2 weeks;
-    uint public maxAssociatedAddresses = 25;
 
+    // Recovery Address Change Logging /////////////////////////////////////////////////////////////////////////////////
     struct RecoveryAddressChange {
         uint timestamp;
         address oldRecoveryAddress;
     }
+
     mapping (uint => RecoveryAddressChange) private recoveryAddressChangeLogs;
 
+
+    // Recovery Logging ////////////////////////////////////////////////////////////////////////////////////////////////
     struct Recovery {
         uint timestamp;
         bytes32 hashedOldAssociatedAddresses;
     }
+
     mapping (uint => Recovery) private recoveryLogs;
 
-    // checks if the passed ein has changed recovery addresses within the recoveryTimeout
+
+    // Recovery Timeout ////////////////////////////////////////////////////////////////////////////////////////////////
+    uint public recoveryTimeout = 2 weeks;
+
+    /// @dev Checks if the passed EIN has changed their recovery address within recoveryTimeout seconds of now.
+    /// @param ein The EIN to check for.
+    /// @return true if the passed EIN can change their recovery address, false otherwise.
     function canChangeRecoveryAddress(uint ein) private view returns (bool) {
         // solium-disable-next-line security/no-block-members
         return block.timestamp > recoveryAddressChangeLogs[ein].timestamp + recoveryTimeout;
     }
 
-    // enforces that the passed ein has not changed recovery addresses within the recoveryTimeout
-    modifier _canChangeRecoveryAddress(uint ein) {
-        require(canChangeRecoveryAddress(ein), "Cannot trigger a change in recovery address yet.");
-        _;
-    }
-
-    // enforces that the passed ein has not recovered within the recoveryTimeout
-    function canRecover(uint ein, bool check) private view {
-        require(
-            // solium-disable-next-line security/no-block-members
-            block.timestamp > recoveryLogs[ein].timestamp + recoveryTimeout == check,
-            "Can/cannot trigger recovery yet."
-        );
+    /// @dev Checks if the passed EIN has recovered within recoveryTimeout seconds of now.
+    /// @param ein The EIN to check for.
+    /// @return true if the passed EIN can recover, false otherwise.
+    function canRecover(uint ein) private view returns (bool) {
+        // solium-disable-next-line security/no-block-members
+        return block.timestamp > recoveryLogs[ein].timestamp + recoveryTimeout;
     }
 
 
-    // checks whether a given identity exists (does not throw)
+    // Identity View Functions /////////////////////////////////////////////////////////////////////////////////////////
+    /// @notice Checks if the passed EIN exists.
+    /// @dev Does not throw.
+    /// @param ein The EIN to check the existence of.
+    /// @return true if the passed EIN exists, false otherwise.
     function identityExists(uint ein) public view returns (bool) {
         return ein < nextEIN && ein > 0;
     }
 
-    // checks whether a given identity exists
+    /// @dev Ensures that the passed EIN exists.
+    /// @param ein The EIN to check the existence of.
     modifier _identityExists(uint ein) {
         require(identityExists(ein), "The identity does not exist.");
         _;
     }
 
-    // checks whether a given address has an identity (does not throw)
+    /// @notice Checks if the passed address is associated with an Identity.
+    /// @dev Does not throw.
+    /// @param _address The address to check.
+    /// @return true if the passed address is associated with an Identity, false otherwise.
     function hasIdentity(address _address) public view returns (bool) {
         return identityExists(associatedAddressDirectory[_address]);
     }
 
-    // enforces that a given address has/does not have an identity
+    /// @dev Ensures that the passed address is or is not associated with an Identity.
+    /// @param _address The address to check.
+    /// @param check If true, ensures that the address has an Identity, if false, vice versa.
+    /// @return true if the associated status is equal to check, false otherwise.
     modifier _hasIdentity(address _address, bool check) {
         require(hasIdentity(_address) == check, "The passed address has/does not have an identity.");
         _;
     }
 
-    // gets the ein of an address (throws if the address doesn't have an ein)
+    /// @notice Gets the EIN associated with the passed address.
+    /// @dev Throws if the address is not associated with an Identity.
+    /// @param _address The address to check.
+    /// @return The associated EIN.
     function getEIN(address _address) public view _hasIdentity(_address, true) returns (uint ein) {
         return associatedAddressDirectory[_address];
     }
 
-    // checks whether a given identity has an address (does not throw)
+    /// @notice Checks whether the passed EIN is associated with the passed address.
+    /// @dev Does not throw.
+    /// @param ein The EIN to check.
+    /// @param _address The address to check.
+    /// @return true if the passed address is associated with the passed EIN, false otherwise.
     function isAssociatedAddressFor(uint ein, address _address) public view returns (bool) {
         return identityDirectory[ein].associatedAddresses.contains(_address);
     }
@@ -152,7 +157,8 @@ contract IdentityRegistry is SignatureVerifier {
         );
     }
 
-    // creates a new identity for the msg.sender
+
+    // Identity Management Functions ///////////////////////////////////////////////////////////////////////////////////
     function createIdentity(address recoveryAddress, address provider, address[] resolvers) public returns (uint ein)
     {
         return createIdentity(recoveryAddress, msg.sender, provider, resolvers, false);
@@ -254,7 +260,7 @@ contract IdentityRegistry is SignatureVerifier {
         identityDirectory[ein].associatedAddresses.insert(addressToAdd);
         associatedAddressDirectory[addressToAdd] = ein;
 
-        emit AddressAdded(msg.sender, ein, addressToAdd, approvingAddress);
+        emit AddressAdded(msg.sender, ein, approvingAddress, addressToAdd);
     }
 
     // allow providers to remove addresses
@@ -342,11 +348,11 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
 
-    // trigger a change in recovery address
-    function triggerRecoveryAddressChangeFor(uint ein, address newRecoveryAddress)
-        public _isProviderFor(ein) _canChangeRecoveryAddress(ein)
-    {
+    // Recovery Management Functions ///////////////////////////////////////////////////////////////////////////////////
+    function triggerRecoveryAddressChangeFor(uint ein, address newRecoveryAddress) public _isProviderFor(ein) {
         Identity storage _identity = identityDirectory[ein];
+
+        require(canChangeRecoveryAddress(ein), "Cannot trigger a change in recovery address yet.");
 
          // solium-disable-next-line security/no-block-members
         recoveryAddressChangeLogs[ein] = RecoveryAddressChange(block.timestamp, _identity.recoveryAddress);
@@ -361,7 +367,7 @@ contract IdentityRegistry is SignatureVerifier {
     function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s, uint timestamp)
         public _identityExists(ein) _hasIdentity(newAssociatedAddress, false) ensureSignatureTimeValid(timestamp)
     {
-        canRecover(ein, true);
+        require(canRecover(ein), "Cannot trigger recovery yet.");
         Identity storage _identity = identityDirectory[ein];
 
         // ensure the sender is the recovery address/old recovery address if there's been a recent change
@@ -410,7 +416,7 @@ contract IdentityRegistry is SignatureVerifier {
     function triggerPoisonPill(uint ein, address[] firstChunk, address[] lastChunk, bool resetResolvers)
         public _identityExists(ein)
     {
-        canRecover(ein, false);
+        require(!canRecover(ein), "Recovery has not recently been triggered.");
         Identity storage _identity = identityDirectory[ein];
 
         // ensure that the msg.sender was an old associated address for the referenced identity
@@ -438,12 +444,12 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
 
-    // define events
+    // Events //////////////////////////////////////////////////////////////////////////////////////////////////////////
     event IdentityCreated(
         address indexed initiator, uint indexed ein,
         address recoveryAddress, address associatedAddress, address provider, address[] resolvers, bool delegated
     );
-    event AddressAdded    (address indexed initiator, uint indexed ein, address addedAddress, address approvingAddress);
+    event AddressAdded    (address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress);
     event AddressRemoved  (address indexed initiator, uint indexed ein, address removedAddress);
     event ProviderAdded   (address indexed initiator, uint indexed ein, address provider, bool delegated);
     event ProviderRemoved (address indexed initiator, uint indexed ein, address provider, bool delegated);

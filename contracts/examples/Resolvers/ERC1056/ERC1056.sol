@@ -1,24 +1,21 @@
 pragma solidity ^0.4.24;
 
 interface IdentityRegistryInterface {
-    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s)
-        external view returns (bool);
+    function isSigned(
+        address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s
+    ) external view returns (bool);
     function getEIN(address _address) external view returns (uint ein);
-    function isResolverFor(uint ein, address resolver) external view returns (bool);
-    function identityExists(uint ein) external view returns (bool);
-    function getDetails(uint ein) external view
-      returns (address recoveryAddress, address[] associatedAddresses, address[] providers, address[] resolvers);
 }
 
 interface EthereumDIDRegistryInterface {
-    function identityOwner(address identity) external view returns(address);
-    function validDelegate(address identity, bytes32 delegateType, address delegate) external view returns(bool);
-    function changeOwner(address identity, address newOwner) external;
+    function identityOwner    (address identity) external view returns(address);
+    function validDelegate    (address identity, bytes32 delegateType, address delegate) external view returns(bool);
+    function changeOwner      (address identity, address newOwner) external;
     function changeOwnerSigned(address identity, uint8 sigV, bytes32 sigR, bytes32 sigS, address newOwner) external;
-    function addDelegate(address identity, bytes32 delegateType, address delegate, uint validity) external;
-    function revokeDelegate(address identity, bytes32 delegateType, address delegate) external;
-    function setAttribute(address identity, bytes32 name, bytes value, uint validity) external;
-    function revokeAttribute(address identity, bytes32 name, bytes value) external;
+    function addDelegate      (address identity, bytes32 delegateType, address delegate, uint validity) external;
+    function revokeDelegate   (address identity, bytes32 delegateType, address delegate) external;
+    function setAttribute     (address identity, bytes32 name, bytes value, uint validity) external;
+    function revokeAttribute  (address identity, bytes32 name, bytes value) external;
 }
 
 contract ERC1056 {
@@ -33,10 +30,10 @@ contract ERC1056 {
     mapping(uint => address) public einToDID;
     mapping(uint => uint) public actionNonce;
 
-    function initialize(address identity, uint8 sigV, bytes32 sigR, bytes32 sigS) public {
+    function initialize(address identity, uint8 v, bytes32 r, bytes32 s) public {
         uint ein = identityRegistry.getEIN(msg.sender);
         require(einToDID[ein] == address(0), "This EIN has already been initialized");
-        ethereumDIDRegistry.changeOwnerSigned(identity, sigV, sigR, sigS, address(this));
+        ethereumDIDRegistry.changeOwnerSigned(identity, v, r, s, address(this));
         einToDID[ein] = identity;
     }
 
@@ -45,13 +42,17 @@ contract ERC1056 {
         _changeOwner(einToDID[ein], newOwner);
     }
 
-    function changeOwnerDelegated(address newOwner, uint8 sigV, bytes32 sigR, bytes32 sigS, address addrDelegated) public {
-        uint ein = identityRegistry.getEIN(addrDelegated);
+    function changeOwnerDelegated(address approvingAddress, address newOwner, uint8 v, bytes32 r, bytes32 s) public {
+        uint ein = identityRegistry.getEIN(approvingAddress);
         require(
             identityRegistry.isSigned(
-                addrDelegated,
-                keccak256(abi.encodePacked("changeOwnerDelegated", newOwner, actionNonce[ein])),
-                sigV, sigR, sigS
+                approvingAddress,
+                keccak256(
+                    abi.encodePacked(
+                        byte(0x19), byte(0), address(this), "changeOwnerDelegated", newOwner, actionNonce[ein]
+                    )
+                ),
+                v, r, s
             ),
             "Function execution is incorrectly signed."
         );
@@ -70,17 +71,21 @@ contract ERC1056 {
     }
 
     function addDelegateDelegated(
-        bytes32 delegateType, address delegate, uint validity,
-        uint8 sigV, bytes32 sigR, bytes32 sigS, address addrDelegated
+        address approvingAddress, bytes32 delegateType, address delegate, uint validity, uint8 v, bytes32 r, bytes32 s
     )
         public
     {
-        uint ein = identityRegistry.getEIN(addrDelegated);
+        uint ein = identityRegistry.getEIN(approvingAddress);
         require(
             identityRegistry.isSigned(
-                addrDelegated,
-                keccak256(abi.encodePacked("addDelegateDelegated", delegateType, delegate, validity, actionNonce[ein])),
-                sigV, sigR, sigS
+                approvingAddress,
+                keccak256(
+                    abi.encodePacked(
+                        byte(0x19), byte(0), address(this),
+                        "addDelegateDelegated", delegateType, delegate, validity, actionNonce[ein]
+                    )
+                ),
+                v, r, s
             ),
             "Function execution is incorrectly signed."
         );
@@ -99,16 +104,21 @@ contract ERC1056 {
     }
 
     function revokeDelegateDelegated(
-        bytes32 delegateType, address delegate, uint8 sigV, bytes32 sigR, bytes32 sigS, address addrDelegated
+        address approvingAddress, bytes32 delegateType, address delegate, uint8 v, bytes32 r, bytes32 s
     )
         public
     {
-        uint ein = identityRegistry.getEIN(addrDelegated);
+        uint ein = identityRegistry.getEIN(approvingAddress);
         require(
             identityRegistry.isSigned(
-                addrDelegated,
-                keccak256(abi.encodePacked("revokeDelegateDelegated", delegateType, delegate, actionNonce[ein])),
-                sigV, sigR, sigS
+                approvingAddress,
+                keccak256(
+                    abi.encodePacked(
+                        byte(0x19), byte(0), address(this),
+                        "revokeDelegateDelegated", delegateType, delegate, actionNonce[ein]
+                    )
+                ),
+                v, r, s
             ),
             "Function execution is incorrectly signed."
         );
@@ -127,16 +137,21 @@ contract ERC1056 {
     }
 
     function setAttributeDelegated(
-        bytes32 name, bytes value, uint validity, uint8 sigV, bytes32 sigR, bytes32 sigS, address addrDelegated
+        address approvingAddress, bytes32 name, bytes value, uint validity, uint8 v, bytes32 r, bytes32 s
     )
         public
     {
-        uint ein = identityRegistry.getEIN(addrDelegated);
+        uint ein = identityRegistry.getEIN(approvingAddress);
         require(
             identityRegistry.isSigned(
-                addrDelegated,
-                keccak256(abi.encodePacked("setAttributeDelegated", name, value, validity, actionNonce[ein])),
-                sigV, sigR, sigS
+                approvingAddress,
+                keccak256(
+                    abi.encodePacked(
+                        byte(0x19), byte(0), address(this),
+                        "setAttributeDelegated", name, value, validity, actionNonce[ein]
+                    )
+                ),
+                v, r, s
             ),
             "Function execution is incorrectly signed."
         );
@@ -155,16 +170,21 @@ contract ERC1056 {
     }
 
     function revokeAttributeDelegated(
-        bytes32 name, bytes value, uint8 sigV, bytes32 sigR, bytes32 sigS, address addrDelegated
+        address approvingAddress, bytes32 name, bytes value, uint8 v, bytes32 r, bytes32 s
     )
         public
     {
-        uint ein = identityRegistry.getEIN(addrDelegated);
+        uint ein = identityRegistry.getEIN(approvingAddress);
         require(
             identityRegistry.isSigned(
-                addrDelegated,
-                keccak256(abi.encodePacked("revokeAttributeDelegated", name, value, actionNonce[ein])),
-                sigV, sigR, sigS
+                approvingAddress,
+                keccak256(
+                    abi.encodePacked(
+                        byte(0x19), byte(0), address(this),
+                        "revokeAttributeDelegated", name, value, actionNonce[ein]
+                    )
+                ),
+                v, r, s
             ),
             "Function execution is incorrectly signed."
         );

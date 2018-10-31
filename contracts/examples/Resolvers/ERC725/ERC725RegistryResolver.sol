@@ -4,7 +4,7 @@ import "./ClaimHolder.sol";
 
 contract IdentityRegistryInterface {
     function getEIN(address _address) public view returns (uint ein);
-    function getDetails(uint ein) public view
+    function getIdentity(uint ein) public view
         returns (address recoveryAddress, address[] associatedAddresses, address[] providers, address[] resolvers);
 }
 
@@ -34,7 +34,7 @@ contract ERC725RegistryResolver {
         uint ein = registry.getEIN(msg.sender);
 
         address[] memory ownedAddresses;
-        (,ownedAddresses,,) = registry.getDetails(ein);
+        (,ownedAddresses,,) = registry.getIdentity(ein);
 
         require(einTo725[ein] == address(0), "You already have a 725");
 

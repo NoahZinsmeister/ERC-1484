@@ -1,7 +1,7 @@
 const Web3 = require('web3')
 const web3 = new Web3(Web3.givenProvider || 'http://localhost:8555')
 
-const { sign, verifyIdentity } = require('../../common.js')
+const { verifyIdentity } = require('../../common.js')
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
 const ERC725 = artifacts.require('./examples/Resolvers/ERC725/ERC725RegistryResolver.sol')
@@ -25,16 +25,16 @@ contract('Testing ERC725 Resolver', function (accounts) {
     instances.ERC725 = await ERC725.new(instances.IdentityRegistry.address)
   })
 
-  describe('Mint Snowflake', async () => {
-    it('Identity minted', async function () {
+  describe('Create Snowflake', async () => {
+    it('Identity created', async function () {
       const user = users[0]
       const otherGuy = users[1]
 
-      await instances.IdentityRegistry.mintIdentity(
+      await instances.IdentityRegistry.createIdentity(
         user.address, user.address, [instances.ERC725.address], { from: user.address }
       )
 
-      await instances.IdentityRegistry.mintIdentity(
+      await instances.IdentityRegistry.createIdentity(
         otherGuy.address, otherGuy.address, [instances.ERC725.address], { from: otherGuy.address }
       )
 
@@ -53,15 +53,15 @@ contract('Testing ERC725 Resolver', function (accounts) {
   describe('All 725 logic', async () => {
     const user = users[0]
     const otherGuy = users[1]
-    let claimAddress;
+    let claimAddress
 
     it('725 mint', async function () {
       await instances.ERC725.create725({ from: user.address })
     })
 
-    it('725 mint FAIL', async function () {
+    it('725 create FAIL', async function () {
       await instances.ERC725.create725({ from: user.address })
-        .then(() => assert.fail('able to mint again', 'transaction should fail'))
+        .then(() => assert.fail('able to create again', 'transaction should fail'))
         .catch(error => assert.include(
           error.message, 'You already have a 725', 'wrong rejection reason'
         ))
@@ -83,7 +83,7 @@ contract('Testing ERC725 Resolver', function (accounts) {
 
     it('725 claim FAIL', async function () {
       await instances.ERC725.claim725(claimAddress, { from: user.address })
-        .then(() => assert.fail('able to mint again', 'transaction should fail'))
+        .then(() => assert.fail('able to create again', 'transaction should fail'))
         .catch(error => assert.include(
           error.message, 'You already have a 725', 'wrong rejection reason'
         ))
@@ -99,5 +99,4 @@ contract('Testing ERC725 Resolver', function (accounts) {
       assert.equal(success, false)
     })
   })
-
 })

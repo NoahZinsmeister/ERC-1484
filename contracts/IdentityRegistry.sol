@@ -102,7 +102,8 @@ contract IdentityRegistry is SignatureVerifier {
     /// @param check If true, ensures that the address has an Identity, if false, vice versa.
     /// @return true if the associated status is equal to check, false otherwise.
     modifier _hasIdentity(address _address, bool check) {
-        require(hasIdentity(_address) == check, "The passed address has/does not have an identity.");
+        require(check && !hasIdentity(_address), "The passed address does not have an identity.");
+        require(!check && hasIdentity(_address), "The passed address has an identity.");
         _;
     }
 

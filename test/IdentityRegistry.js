@@ -47,7 +47,7 @@ contract('Testing Identity', function (accounts) {
       await instances.IdentityRegistry.getEIN(accountsPrivate[0].address)
         .then(() => assert.fail('got an EIN', 'transaction should fail'))
         .catch(error => assert.include(
-          error.message, 'The passed address has/does not have an identity.', 'wrong rejection reason'
+          error.message, 'The passed address does not have an identity.', 'wrong rejection reason'
         ))
     })
 
@@ -59,13 +59,6 @@ contract('Testing Identity', function (accounts) {
         ))
     })
 
-    // it('_isProviderFor FAIL', async function () {
-    //   await instances.IdentityRegistry.getIdentity(1337)
-    //     .then(() => assert.fail('got an Identity', 'transaction should fail'))
-    //     .catch(error => assert.include(
-    //       error.message, 'The identity does not exist.', 'wrong rejection reason'
-    //     ))
-    // })
   })
 
   describe('Testing Identity Registry', function () {
@@ -506,38 +499,6 @@ contract('Testing Identity', function (accounts) {
     let futureTimestamp
     let futureNewAssociatedAddressPermission
     const twoWeeks = 60 * 60 * 24 * 14
-
-    it('New recovery address cannot trigger recovery', async function () {
-      newAssociatedAddress = accountsPrivate[9]
-      timestamp = Math.round(new Date() / 1000) - 1
-      futureTimestamp = timestamp + twoWeeks
-      const permissionString = web3.utils.soliditySha3(
-        '0x19', '0x00', instances.IdentityRegistry.address,
-        'I authorize being added to this Identity via recovery.',
-        identity.identity, newAssociatedAddress.address, timestamp
-      )
-      newAssociatedAddressPermission = await sign(
-        permissionString, newAssociatedAddress.address, newAssociatedAddress.private
-      )
-      const futurePermissionString = web3.utils.soliditySha3(
-        '0x19', '0x00', instances.IdentityRegistry.address,
-        'I authorize being added to this Identity via recovery.',
-        identity.identity, newAssociatedAddress.address, futureTimestamp
-      )
-      futureNewAssociatedAddressPermission = await sign(
-        futurePermissionString, newAssociatedAddress.address, newAssociatedAddress.private
-      )
-
-      await instances.IdentityRegistry.triggerRecovery(
-        identity.identity, newAssociatedAddress.address,
-        newAssociatedAddressPermission.v, newAssociatedAddressPermission.r, newAssociatedAddressPermission.s, timestamp,
-        { from: newRecoveryAddress.address }
-      )
-        .then(() => assert.fail('new recovery address triggered recovery', 'transaction should fail'))
-        .catch(error => assert.include(
-          error.message, 'Only the recently removed recovery address can trigger recovery.', 'wrong rejection reason'
-        ))
-    })
 
     it('Can trigger change in recovery address', async function () {
       newRecoveryAddress = accountsPrivate[8]

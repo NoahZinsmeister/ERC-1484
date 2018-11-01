@@ -10,17 +10,10 @@ Feedback on this proposal is welcomed in [the official discussion forum](https:/
 This repo contains:
 
 - The [`Identity Registry` reference implementation](./contracts/IdentityRegistry.sol).
-- A [full test suite](./test).
+- A 100% coverage [test suite](./test).
 - A sample [`Provider`](./contracts/samples/Provider.sol) and [`Resolver`](.contracts/samples/Resolver.sol).
 - [Best Practices](./best-practices) explaining and extending various aspects of ERC-1484.
 - Example [`Providers`](./contracts/examples/Providers) and [`Resolvers`](./contracts/examples/Resolvers). These include an [ERC-725 Resolver](./contracts/examples/Resolvers/ERC725), an [ERC-1056 Resolver](./contracts/examples/Resolvers/ERC1056), and a [Meta-Transactions Provider](./contracts/examples/Providers/MetaTransactions).
-
-## Deployments
-*FOR TESTING PURPOSES ONLY*, an `Identity Registry` contract has been deployed on the Rinkeby testnet. This will not be the final address.
-
-|Network        |Address|
-|---------------|-------|
-|Rinkeby (id: 4)|[0x8d37E9744887a4673CaEA1fd524d0FED7Edb1c23](https://rinkeby.etherscan.io/address/0x8d37e9744887a4673caea1fd524d0fed7edb1c23)|
 
 
 ## Running Tests Locally

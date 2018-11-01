@@ -5,18 +5,18 @@ did:erc1484 method
 Anurag Angara <<anurag.angara@gmail.com>>,
 Andy Chorlian <<andychorlian@gmail.com>>,
 Shane Hampton <<shanehampton1@gmail.com>>,
-Noah Zinsmeister <<noahwz@gmail.com>>,
+Noah Zinsmeister <<noahwz@gmail.com>>
 
 
 Decentralized Identifiers (DIDs, see **[1]**) are designed to be compatible with any distributed ledger or network (called the target system).
 In the Ethereum community, a pattern known as ERC1484 (see **[2]**) utilizes an on-chain registry to resolve a user-controlled `Identity` to arbitrary data structures in smart contracts.
-We propose a new DID method that allows ERC1484 identities to be treated as valid DIDs, denominated by a globally unique `EIN` designated in a `Registry` that enables construction of each unique `Identity`. 
+We propose a new DID method that allows ERC1484 identities to be treated as valid DIDs, denominated by a globally unique `EIN` designated in a `Registry` that enables construction of each unique `Identity`.
 
 One advantage of this DID method over others appears to be the ability to aggregate arbitrarily sophisticated identity management frameworks to an entity on the Ethereum network.
 
 ## DID Method Name
 
-The namestring that shall identify this DID method is: `erc1484`
+The namestring that shall identify this DID method is: `erc1484`.
 
 A DID that uses this method MUST begin with the following prefix: `did:erc1484`. Per the DID specification, this string MUST be in lowercase. The remainder of the DID, after the prefix, is specified below.
 
@@ -74,7 +74,7 @@ Example `erc1484` DIDs:
 
 ### Create (Register)
 
-To create a DID, the `mintIdentity` function or the `mintIdentityDelegated` of the `IdentityRegistry ERC 1484 contract` must be called. The returned `EIN` becomes the entity defined by the DID per the specifications above (i.e. `did:erc1484:00000000000000000000000000000000000000000000000000000000000000e1`).
+To create a DID, the `createIdentity` or `createIdentityDelegated` functions of the ERC-1484 `IdentityRegistry` must be called. The returned `EIN` becomes the entity defined by the DID per the specifications above (i.e. `did:erc1484:00000000000000000000000000000000000000000000000000000000000000e1`).
 
 ### Read (Resolve)
 
@@ -105,7 +105,7 @@ Note that these methods are written in the Solidity language. Ethereum smart con
 
 ### Delete (Revoke)
 
-Revoking the DID can be supported by executing a `triggerPoisonPill` function in the smart contract. This will remove the `EIN's` `Associated Addresses` and `Providers` code from the `IdentityRegistry ERC 1484 contract`, effectively marking the DID as revoked.
+Revoking the DID can be supported by executing a `triggerPoisonPill` function in the smart contract. This will effectively mark the DID as revoked.
 
 `function triggerPoisonPill(uint ein, address[] firstChunk, address[] lastChunk, bool clearResolvers) public;`
 

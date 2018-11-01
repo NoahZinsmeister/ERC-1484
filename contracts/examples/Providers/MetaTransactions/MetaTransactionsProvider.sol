@@ -1,5 +1,7 @@
 pragma solidity ^0.4.24;
 
+import "./ExternalProxy.sol";
+
 interface IdentityRegistryInterface {
     function isSigned(
         address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s
@@ -10,36 +12,6 @@ interface IdentityRegistryInterface {
     ) external returns (uint ein);
     function getEIN(address _address) external view returns (uint ein);
     function isProviderFor(uint ein, address provider) external view returns (bool);
-}
-
-contract ForwarderInterface {
-    function forwardCall(address destination, bytes memory data) public;
-}
-
-contract Forwarder is ForwarderInterface {
-    function forwardCall(address destination, bytes memory data) public {
-        require(destination.call(data), "Call was not successful."); // solium-disable-line security/no-low-level-calls
-    }
-}
-
-// this is a fragile proxy in that the allowedCaller can't change, but for PoC purposes it will suffice
-contract ExternalProxy is Forwarder {
-    uint owner; // the EIN that owns this proxy
-    address allowedCaller; // an address that can use this proxy, initially set to the Provider that created this proxy
-
-    constructor (uint _owner, address _allowedCaller) public {
-        owner = _owner;
-        allowedCaller = _allowedCaller;
-    }
-
-    modifier onlyAllowedCaller() {
-        require(msg.sender == allowedCaller, "Caller is not allowed.");
-        _;
-    }
-
-    function forwardCall(address destination, bytes memory data) public onlyAllowedCaller() {
-        super.forwardCall(destination, data);
-    }
 }
 
 contract MetaTransactionsProvider is Forwarder {

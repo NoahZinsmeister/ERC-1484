@@ -188,6 +188,21 @@ contract('Testing Identity', function (accounts) {
       })
     })
 
+    it('Identity created FAIL -- has an address', async function () {
+      await instances.IdentityRegistry.createIdentity(
+        identity.recoveryAddress.address, identity.providers[0].address, [],
+        { from: identity.associatedAddresses[0].address }
+      )
+        .then(() => assert.fail('got an EIN', 'transaction should fail'))
+        .catch(error => {
+          if (error.message !== defaultErrorMessage) {
+            assert.include(
+              error.message, 'The passed address has an identity but should not.', 'wrong rejection reason'
+            )
+          }
+        })
+    })
+
     it('provider can add other addresses FAIL -- not a provider', async function () {
       for (const address of [identity.associatedAddresses[1], identity.associatedAddresses[2], accountsPrivate[5]]) {
         const timestamp = Math.round(new Date() / 1000) - 1
@@ -350,8 +365,10 @@ contract('Testing Identity', function (accounts) {
             ))
         }
       }
+    })
 
-      // clean up by removing address
+    it('provider can add other addresses -- FAIL too many cleaning up', async function () {
+      const maxAddresses = await instances.IdentityRegistry.maxAssociatedAddresses.call()
       for (let i = 0; i < maxAddresses - 1; i++) {
         const timestamp = Math.round(new Date() / 1000) - 1
         const permissionString = web3.utils.soliditySha3(

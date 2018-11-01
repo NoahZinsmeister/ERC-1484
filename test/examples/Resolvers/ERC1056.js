@@ -47,6 +47,42 @@ contract('Testing ERC1056 Resolver', function (accounts) {
   })
 
   describe('initialize', async () => {
+    const user = users[0]
+    const delegate = users[1]
+    const randomBytes = web3.utils.soliditySha3('random')
+    const name = web3.utils.soliditySha3('name')
+    const value = '0x01'
+
+    it('change owner -- FAIL', async function () {
+      await instances.ERC1056.changeOwner(user.address, { from: user.address })
+        .then(() => assert.fail('able to change owner', 'transaction should fail'))
+        .catch(error => assert.include(error.message, 'This EIN has not been initialized', 'wrong rejection reason'))
+    })
+
+    it('add delegate -- FAIL', async function () {
+      await instances.ERC1056.addDelegate(randomBytes, delegate.address, 10000, { from: user.address })
+        .then(() => assert.fail('able to change owner', 'transaction should fail'))
+        .catch(error => assert.include(error.message, 'This EIN has not been initialized', 'wrong rejection reason'))
+    })
+
+    it('remove delegate -- FAIL', async function () {
+      await instances.ERC1056.revokeDelegate(randomBytes, delegate.address, { from: user.address })
+        .then(() => assert.fail('able to change owner', 'transaction should fail'))
+        .catch(error => assert.include(error.message, 'This EIN has not been initialized', 'wrong rejection reason'))
+    })
+
+    it('add attribute -- FAIL', async function () {
+      await instances.ERC1056.setAttribute(name, value, 10000, { from: user.address })
+        .then(() => assert.fail('able to change owner', 'transaction should fail'))
+        .catch(error => assert.include(error.message, 'This EIN has not been initialized', 'wrong rejection reason'))
+    })
+
+    it('remove attribute -- FAIL', async function () {
+      await instances.ERC1056.revokeAttribute(name, value, { from: user.address })
+        .then(() => assert.fail('able to change owner', 'transaction should fail'))
+        .catch(error => assert.include(error.message, 'This EIN has not been initialized', 'wrong rejection reason'))
+    })
+
     it('1056 owner changed', async function () {
       const user = users[0]
 
@@ -84,7 +120,7 @@ contract('Testing ERC1056 Resolver', function (accounts) {
     const user = users[0]
 
     it('change owner', async function () {
-      await instances.ERC1056.changeOwner(instances.ERC1056.address, { from:  user.address })
+      await instances.ERC1056.changeOwner(instances.ERC1056.address, { from: user.address })
     })
 
     it('change owner signed', async function () {
@@ -98,7 +134,7 @@ contract('Testing ERC1056 Resolver', function (accounts) {
       const signature = await sign(permission, user.address, user.private, 'unprefixed')
 
       await instances.ERC1056.changeOwnerDelegated(
-        user.address, instances.ERC1056.address, signature.v, signature.r, signature.s, { from:  user.address }
+        user.address, instances.ERC1056.address, signature.v, signature.r, signature.s, { from: user.address }
       )
     })
 
@@ -111,7 +147,7 @@ contract('Testing ERC1056 Resolver', function (accounts) {
       const signature = await sign(permission, user.address, user.private, 'unprefixed')
 
       await instances.ERC1056.changeOwnerDelegated(
-        user.address, instances.ERC1056.address, signature.v, signature.r, signature.s, { from:  user.address }
+        user.address, instances.ERC1056.address, signature.v, signature.r, signature.s, { from: user.address }
       )
         .then(() => assert.fail('able to initialize', 'transaction should fail'))
         .catch(error => assert.include(
@@ -126,11 +162,11 @@ contract('Testing ERC1056 Resolver', function (accounts) {
     const randomBytes = web3.utils.soliditySha3('random')
 
     it('add delegate', async function () {
-      await instances.ERC1056.addDelegate(randomBytes, delegate.address, 10000, { from:  user.address })
+      await instances.ERC1056.addDelegate(randomBytes, delegate.address, 10000, { from: user.address })
     })
 
     it('remove delegate', async function () {
-      await instances.ERC1056.revokeDelegate(randomBytes, delegate.address, { from:  user.address })
+      await instances.ERC1056.revokeDelegate(randomBytes, delegate.address, { from: user.address })
     })
   })
 
@@ -220,11 +256,11 @@ contract('Testing ERC1056 Resolver', function (accounts) {
     const value = '0x01'
 
     it('add attribute', async function () {
-      await instances.ERC1056.setAttribute(name, value, 10000, { from:  user.address })
+      await instances.ERC1056.setAttribute(name, value, 10000, { from: user.address })
     })
 
     it('remove attribute', async function () {
-      await instances.ERC1056.revokeAttribute(name, value, { from:  user.address })
+      await instances.ERC1056.revokeAttribute(name, value, { from: user.address })
     })
   })
 

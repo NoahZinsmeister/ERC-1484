@@ -56,8 +56,12 @@ const privateKeys = [
   '0x3d040afbd0994006bcff33733642033bc2b32a617d8cef6c83337cc0a45f407d'
 ]
 
+function getAddress (index) {
+  return addresses[index]
+}
+
 function getSignature (hash, index) {
   return sign(hash, addresses[index], privateKeys[index], 'unprefixed')
 }
 
-module.exports = { getSignature: getSignature }
+module.exports = { getAddress: getAddress, getSignature: getSignature }

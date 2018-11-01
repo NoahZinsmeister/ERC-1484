@@ -24,7 +24,8 @@ contract ERC725RegistryResolver {
         require(einTo725[ein] == address(0), "You already have a 725");
 
         ClaimHolder claim = new ClaimHolder();
-        require(claim.addKey(keccak256(abi.encodePacked(msg.sender)), 1, 1), "Failed to add key.");
+        // TODO: change this if addKey implementation changes s.t. it can return false
+        claim.addKey(keccak256(abi.encodePacked(msg.sender)), 1, 1);
 
         einTo725[ein] = claim;
         return(claim);

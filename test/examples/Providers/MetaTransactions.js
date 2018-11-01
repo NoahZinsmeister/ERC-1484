@@ -4,6 +4,7 @@ const web3 = new Web3(Web3.givenProvider || 'http://localhost:8555')
 const { sign, verifyIdentity } = require('../../common.js')
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
+const ExternalProxy = artifacts.require('./examples/Providers/MetaTransactions/ExternalProxy.sol')
 const MetaTransactionsProvider = artifacts.require('./examples/Providers/MetaTransactions/MetaTransactionsProvider.sol')
 
 const instances = {}
@@ -59,30 +60,94 @@ contract('Testing ERC1056 Resolver', function (accounts) {
     )
   })
 
+  it('Can call via proxy for self -- FAIL call', async function () {
+    const methodID = web3.utils.soliditySha3('getEIN(address)').substring(0, 10)
+    const argument = '0000000000000000000000000000000000000000000000000000000000000045'
+    const data = `${methodID}${argument}`
+    const destination = instances.IdentityRegistry.address
+
+    await instances.MetaTransactionsProvider.callViaProxy(destination, data, false, { from: user.address })
+      .then(() => assert.fail('call was successful', 'transaction should fail'))
+      .catch(error => assert.include(
+        error.message, 'Call was not successful.', 'wrong rejection reason'
+      ))
+  })
+
   it('Can call via proxy for self via external', async function () {
     const methodID = web3.utils.soliditySha3('identityExists(uint256)').substring(0, 10)
     const argument = '0000000000000000000000000000000000000000000000000000000000000045'
     const data = `${methodID}${argument}`
+    const destination = instances.IdentityRegistry.address
 
-    await instances.MetaTransactionsProvider.callViaProxy(
-      instances.IdentityRegistry.address, data, true, { from: user.address }
-    )
+    await instances.MetaTransactionsProvider.callViaProxy(destination, data, true, { from: user.address })
   })
 
   it('Can call via proxy delegated via external', async function () {
     const methodID = web3.utils.soliditySha3('identityExists(uint256)').substring(0, 10)
     const argument = '0000000000000000000000000000000000000000000000000000000000000045'
     const data = `${methodID}${argument}`
+    const destination = instances.IdentityRegistry.address
 
     const permissionString = web3.utils.soliditySha3(
       '0x19', '0x00', instances.MetaTransactionsProvider.address,
-      'I authorize this call.', user.identity, instances.IdentityRegistry.address, data, false, 0
+      'I authorize this call.', user.identity, destination, data, true, 0
     )
     const permission = await sign(permissionString, user.address, user.private)
 
     await instances.MetaTransactionsProvider.callViaProxyDelegated(
-      user.address, instances.IdentityRegistry.address, data, false,
-      permission.v, permission.r, permission.s
+      user.address, destination, data, true, permission.v, permission.r, permission.s
     )
+  })
+
+  it('Can call via proxy delegated via external -- FAIL signature', async function () {
+    const methodID = web3.utils.soliditySha3('identityExists(uint256)').substring(0, 10)
+    const argument = '0000000000000000000000000000000000000000000000000000000000000045'
+    const data = `${methodID}${argument}`
+    const destination = instances.IdentityRegistry.address
+
+    const permissionString = web3.utils.soliditySha3(
+      '0x19', '0x00', instances.MetaTransactionsProvider.address,
+      'I DO NOT authorize this call.', user.identity, destination, data, false, 0
+    )
+    const permission = await sign(permissionString, user.address, user.private)
+
+    await instances.MetaTransactionsProvider.callViaProxyDelegated(
+      user.address, destination, data, true, permission.v, permission.r, permission.s
+    )
+      .then(() => assert.fail('call was successful', 'transaction should fail'))
+      .catch(error => assert.include(error.message, 'Permission denied.', 'wrong rejection reason'))
+  })
+
+  it('Can call via external proxy -- FAIL', async function () {
+    const externalProxyAddress = await instances.MetaTransactionsProvider.externalProxyDirectory.call(user.identity)
+    instances.ExternalProxy = await ExternalProxy.at(externalProxyAddress)
+
+    const methodID = web3.utils.soliditySha3('identityExists(uint256)').substring(0, 10)
+    const argument = '0000000000000000000000000000000000000000000000000000000000000045'
+    const data = `${methodID}${argument}`
+    const destination = instances.IdentityRegistry.address
+
+    await instances.ExternalProxy.forwardCall(destination, data)
+      .then(() => assert.fail('call was successful', 'transaction should fail'))
+      .catch(error => assert.include(
+        error.message, 'Caller is not allowed.', 'wrong rejection reason'
+      ))
+  })
+
+  it('Can call via proxy for self -- FAIL provider', async function () {
+    await instances.IdentityRegistry.removeProviders(
+      [instances.MetaTransactionsProvider.address], { from: user.address }
+    )
+
+    const methodID = web3.utils.soliditySha3('getEIN(address)').substring(0, 10)
+    const argument = '0000000000000000000000000000000000000000000000000000000000000045'
+    const data = `${methodID}${argument}`
+    const destination = instances.IdentityRegistry.address
+
+    await instances.MetaTransactionsProvider.callViaProxy(destination, data, false, { from: user.address })
+      .then(() => assert.fail('call was successful', 'transaction should fail'))
+      .catch(error => assert.include(
+        error.message, 'This Provider is not set for the given EIN.', 'wrong rejection reason'
+      ))
   })
 })

@@ -11,6 +11,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Identity Data Structure and Parameters //////////////////////////////////////////////////////////////////////////
+
     struct Identity {
         address recoveryAddress;
         AddressSet.Set associatedAddresses;
@@ -26,6 +27,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Signature Timeout ///////////////////////////////////////////////////////////////////////////////////////////////
+
     uint public signatureTimeout = 1 days;
 
     /// @dev Enforces that the passed timestamp is within signatureTimeout seconds of now.
@@ -40,6 +42,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Recovery Address Change Logging /////////////////////////////////////////////////////////////////////////////////
+
     struct RecoveryAddressChange {
         uint timestamp;
         address oldRecoveryAddress;
@@ -49,6 +52,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Recovery Logging ////////////////////////////////////////////////////////////////////////////////////////////////
+
     struct Recovery {
         uint timestamp;
         bytes32 hashedOldAssociatedAddresses;
@@ -58,6 +62,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Recovery Timeout ////////////////////////////////////////////////////////////////////////////////////////////////
+
     uint public recoveryTimeout = 2 weeks;
 
     /// @dev Checks if the passed EIN has changed their recovery address within recoveryTimeout seconds of now.
@@ -74,6 +79,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Identity View Functions /////////////////////////////////////////////////////////////////////////////////////////
+
     /// @notice Checks if the passed EIN exists.
     /// @dev Does not throw.
     /// @param ein The EIN to check the existence of.
@@ -172,6 +178,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Identity Management Functions ///////////////////////////////////////////////////////////////////////////////////
+
     /// @notice Create an new Identity for the transaction sender.
     /// @dev Sets the msg.sender as the only Associated Address.
     /// @param recoveryAddress A recovery address to set for the new Identity.
@@ -397,6 +404,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Recovery Management Functions ///////////////////////////////////////////////////////////////////////////////////
+
     /// @notice Allows providers to change the recovery address for an Identity.
     /// @dev Recovery addresses can be changed at most once every recoveryTimeout seconds.
     /// @param ein The EIN to set the recovery address of.
@@ -507,21 +515,22 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     // Events //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     event IdentityCreated(
         address indexed initiator, uint indexed ein,
         address recoveryAddress, address associatedAddress, address provider, address[] resolvers, bool delegated
     );
-    event AddressAdded    (address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress);
-    event AddressRemoved  (address indexed initiator, uint indexed ein, address removedAddress);
-    event ProviderAdded   (address indexed initiator, uint indexed ein, address provider, bool delegated);
-    event ProviderRemoved (address indexed initiator, uint indexed ein, address provider, bool delegated);
-    event ResolverAdded   (address indexed initiator, uint indexed ein, address resolvers);
-    event ResolverRemoved (address indexed initiator, uint indexed ein, address resolvers);
+    event AddressAdded     (address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress);
+    event AddressRemoved   (address indexed initiator, uint indexed ein, address removedAddress);
+    event ProviderAdded    (address indexed initiator, uint indexed ein, address provider, bool delegated);
+    event ProviderRemoved  (address indexed initiator, uint indexed ein, address provider, bool delegated);
+    event ResolverAdded    (address indexed initiator, uint indexed ein, address resolvers);
+    event ResolverRemoved  (address indexed initiator, uint indexed ein, address resolvers);
     event RecoveryAddressChangeTriggered(
         address indexed initiator, uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress
     );
     event RecoveryTriggered(
         address indexed initiator, uint indexed ein, address[] oldAssociatedAddresses, address newAssociatedAddress
     );
-    event IdentityPoisoned(address indexed initiator, uint indexed ein, address recoveryAddress, bool resolversReset);
+    event IdentityPoisoned (address indexed initiator, uint indexed ein, address recoveryAddress, bool resolversReset);
 }

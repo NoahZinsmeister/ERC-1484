@@ -30,10 +30,13 @@ function wrappedAddResolversFor(...) {
 ```
 
 #### 2.Allow third parties to submit permission signatures on behalf of `Identities`
-If we are going to allow someone other than an `associatedAddress` to call functions pertaining to an `EIN`, an `associatedAddress` will have to sign their permission. **Importantly, one must:**
+In some cases, users of your `Provider` will be unable or unwilling to submit and manage transactions on their own behalf. To alleviate this issue, `Providers` are encouraged to gather signatures from `Identities` and use these to manage user `Identites` on their behalf. This technique is know as meta transactions, and a [sample `Provider` implementing this pattern can be found here](../contracts/examples/Providers/MetaTransactions).
 
-- Take care to avoid replay attacks under such a scheme (see [VerifyingSignatures.md](./VerifyingSignatures.md))
+So, we want to allow a `Provider` to call `updateInformation` _on behalf of_ an EIN. In order to ensure that allowing someone other than an `associatedAddress` to call functions pertaining to an `EIN` is not an anti-pattern, we must:
+
+- Garner an appropriate permission signature from an `associatedAddress`.
 - Be thoughtful about the identity of the third parties that may submit signatures. In most cases, `public` functions will be fine, but `onlyOwner` or other permission schemes may be appropriate on a case-by-case basis.
+- Take care to avoid replay attacks under such a scheme (see [VerifyingSignatures.md](./VerifyingSignatures.md) for more information)
 
 After the above have been taken care of, a `Provider` has 3 signature verification options:
 

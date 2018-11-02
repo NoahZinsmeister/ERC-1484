@@ -320,8 +320,9 @@ contract('Testing Identity', function (accounts) {
       }
     })
 
+    let maxAddresses
     it('provider can add other addresses -- FAIL too many', async function () {
-      const maxAddresses = await instances.IdentityRegistry.maxAssociatedAddresses.call()
+      maxAddresses = await instances.IdentityRegistry.maxAssociatedAddresses.call()
       for (let i = 0; i < maxAddresses; i++) {
         const timestamp = Math.round(new Date() / 1000) - 1
         const permissionStringApproving = web3.utils.soliditySha3(
@@ -365,6 +366,28 @@ contract('Testing Identity', function (accounts) {
             ))
         }
       }
+    })
+
+    it('estimating poison pill cost', async function () {
+      const newAssociatedAddress = accountsPrivate[9]
+      const timestamp = Math.round(new Date() / 1000) - 1
+      const permissionString = web3.utils.soliditySha3(
+        '0x19', '0x00', instances.IdentityRegistry.address,
+        'I authorize being added to this Identity via recovery.',
+        identity.identity, newAssociatedAddress.address, timestamp
+      )
+      const newAssociatedAddressPermission = await sign(
+        permissionString, newAssociatedAddress.address, newAssociatedAddress.private
+      )
+
+      const triggerRecoveryCost = await instances.IdentityRegistry.triggerRecovery.estimateGas(
+        identity.identity, newAssociatedAddress.address,
+        newAssociatedAddressPermission.v, newAssociatedAddressPermission.r,
+        newAssociatedAddressPermission.s, timestamp,
+        { from: identity.recoveryAddress.address }
+      )
+
+      assert.isBelow(triggerRecoveryCost, 2000000, 'Triggering Recovery is too expensive.')
     })
 
     it('provider can add other addresses -- FAIL too many cleaning up', async function () {

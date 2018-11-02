@@ -23,7 +23,7 @@ contract IdentityRegistry is SignatureVerifier {
     mapping (address => uint) private associatedAddressDirectory;
 
     uint public nextEIN = 1;
-    uint public maxAssociatedAddresses = 25;
+    uint public maxAssociatedAddresses = 50;
 
 
     // Signature Timeout ///////////////////////////////////////////////////////////////////////////////////////////////

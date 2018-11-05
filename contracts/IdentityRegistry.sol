@@ -254,7 +254,7 @@ contract IdentityRegistry is SignatureVerifier {
     /// @param r The r component of the signatures.
     /// @param s The s component of the signatures.
     /// @param timestamp The timestamp of the signatures.
-    function addAddressDelegated(
+    function addAssociatedAddressDelegated(
         address approvingAddress, address addressToAdd, uint8[2] v, bytes32[2] r, bytes32[2] s, uint[2] timestamp
     )
         public _hasIdentity(addressToAdd, false)
@@ -299,7 +299,7 @@ contract IdentityRegistry is SignatureVerifier {
         identityDirectory[ein].associatedAddresses.insert(addressToAdd);
         associatedAddressDirectory[addressToAdd] = ein;
 
-        emit AddressAdded(msg.sender, ein, approvingAddress, addressToAdd);
+        emit AssociatedAddressAdded(msg.sender, ein, approvingAddress, addressToAdd);
     }
 
     /// @notice Allows providers to remove an associated address from an Identity.
@@ -308,7 +308,7 @@ contract IdentityRegistry is SignatureVerifier {
     /// @param r The r component of the signature.
     /// @param s The s component of the signature.
     /// @param timestamp The timestamp of the signature.
-    function removeAddressDelegated(address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint timestamp)
+    function removeAssociatedAddressDelegated(address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint timestamp)
         public ensureSignatureTimeValid(timestamp)
     {
         uint ein = getEIN(addressToRemove);
@@ -333,7 +333,7 @@ contract IdentityRegistry is SignatureVerifier {
         identityDirectory[ein].associatedAddresses.remove(addressToRemove);
         delete associatedAddressDirectory[addressToRemove];
 
-        emit AddressRemoved(msg.sender, ein, addressToRemove);
+        emit AssociatedAddressRemoved(msg.sender, ein, addressToRemove);
     }
 
     /// @notice Allows an associated address to add providers to its Identity.
@@ -520,17 +520,19 @@ contract IdentityRegistry is SignatureVerifier {
         address indexed initiator, uint indexed ein,
         address recoveryAddress, address associatedAddress, address provider, address[] resolvers, bool delegated
     );
-    event AddressAdded     (address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress);
-    event AddressRemoved   (address indexed initiator, uint indexed ein, address removedAddress);
-    event ProviderAdded    (address indexed initiator, uint indexed ein, address provider, bool delegated);
-    event ProviderRemoved  (address indexed initiator, uint indexed ein, address provider, bool delegated);
-    event ResolverAdded    (address indexed initiator, uint indexed ein, address resolvers);
-    event ResolverRemoved  (address indexed initiator, uint indexed ein, address resolvers);
+    event AssociatedAddressAdded(
+        address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress
+    );
+    event AssociatedAddressRemoved(address indexed initiator, uint indexed ein, address removedAddress);
+    event ProviderAdded(address indexed initiator, uint indexed ein, address provider, bool delegated);
+    event ProviderRemoved(address indexed initiator, uint indexed ein, address provider, bool delegated);
+    event ResolverAdded(address indexed initiator, uint indexed ein, address resolvers);
+    event ResolverRemoved(address indexed initiator, uint indexed ein, address resolvers);
     event RecoveryAddressChangeTriggered(
         address indexed initiator, uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress
     );
     event RecoveryTriggered(
         address indexed initiator, uint indexed ein, address[] oldAssociatedAddresses, address newAssociatedAddress
     );
-    event IdentityPoisoned (address indexed initiator, uint indexed ein, address recoveryAddress, bool resolversReset);
+    event IdentityPoisoned(address indexed initiator, uint indexed ein, address recoveryAddress, bool resolversReset);
 }

@@ -94,7 +94,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
       )
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.Provider.addAddressDelegated(
+      await instances.Provider.addAssociatedAddressDelegated(
         identity.associatedAddresses[0].address, address.address,
         [permissionApproving.v, permission.v],
         [permissionApproving.r, permission.r],
@@ -123,7 +123,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
 
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.Provider.removeAddressDelegated(
+      await instances.Provider.removeAssociatedAddressDelegated(
         address.address, permission.v, permission.r, permission.s, timestamp
       )
 

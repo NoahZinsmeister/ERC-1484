@@ -227,7 +227,7 @@ contract('Testing Identity', function (accounts) {
         )
         const permission = await sign(permissionString, address.address, address.private)
 
-        await instances.IdentityRegistry.addAddressDelegated(
+        await instances.IdentityRegistry.addAssociatedAddressDelegated(
           identity.associatedAddresses[0].address, address.address,
           [permissionApproving.v, permission.v],
           [permissionApproving.r, permission.r],
@@ -266,7 +266,7 @@ contract('Testing Identity', function (accounts) {
         )
         const permission = await sign(permissionString, address.address, address.private)
 
-        await instances.IdentityRegistry.addAddressDelegated(
+        await instances.IdentityRegistry.addAssociatedAddressDelegated(
           identity.associatedAddresses[0].address, address.address,
           [permissionApproving.v, permission.v],
           [permissionApproving.r, permission.r],
@@ -305,7 +305,7 @@ contract('Testing Identity', function (accounts) {
         )
         const permission = await sign(permissionString, address.address, address.private)
 
-        await instances.IdentityRegistry.addAddressDelegated(
+        await instances.IdentityRegistry.addAssociatedAddressDelegated(
           identity.associatedAddresses[0].address, address.address,
           [permissionApproving.v, permission.v],
           [permissionApproving.r, permission.r],
@@ -343,7 +343,7 @@ contract('Testing Identity', function (accounts) {
         const permission = await getSignature(permissionString, i)
 
         if (i !== maxAddresses - 1) {
-          await instances.IdentityRegistry.addAddressDelegated(
+          await instances.IdentityRegistry.addAssociatedAddressDelegated(
             identity.associatedAddresses[0].address, getAddress(i),
             [permissionApproving.v, permission.v],
             [permissionApproving.r, permission.r],
@@ -352,7 +352,7 @@ contract('Testing Identity', function (accounts) {
             { from: identity.providers[0].address }
           )
         } else {
-          await instances.IdentityRegistry.addAddressDelegated(
+          await instances.IdentityRegistry.addAssociatedAddressDelegated(
             identity.associatedAddresses[0].address, getAddress(i),
             [permissionApproving.v, permission.v],
             [permissionApproving.r, permission.r],
@@ -402,7 +402,7 @@ contract('Testing Identity', function (accounts) {
 
         const permission = await getSignature(permissionString, i)
 
-        await instances.IdentityRegistry.removeAddressDelegated(
+        await instances.IdentityRegistry.removeAssociatedAddressDelegated(
           getAddress(i), permission.v, permission.r, permission.s, timestamp,
           { from: identity.providers[0].address }
         )
@@ -429,7 +429,7 @@ contract('Testing Identity', function (accounts) {
         )
         const permission = await sign(permissionString, address.address, address.private)
 
-        await instances.IdentityRegistry.addAddressDelegated(
+        await instances.IdentityRegistry.addAssociatedAddressDelegated(
           identity.associatedAddresses[0].address, address.address,
           [permissionApproving.v, permission.v],
           [permissionApproving.r, permission.r],
@@ -470,7 +470,7 @@ contract('Testing Identity', function (accounts) {
 
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.IdentityRegistry.removeAddressDelegated(
+      await instances.IdentityRegistry.removeAssociatedAddressDelegated(
         address.address, permission.v, permission.r, permission.s, timestamp,
         { from: accountsPrivate[8].address }
       )
@@ -493,7 +493,7 @@ contract('Testing Identity', function (accounts) {
 
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.IdentityRegistry.removeAddressDelegated(
+      await instances.IdentityRegistry.removeAssociatedAddressDelegated(
         address.address, permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
@@ -516,7 +516,7 @@ contract('Testing Identity', function (accounts) {
 
       const permission = await sign(permissionString, address.address, address.private)
 
-      await instances.IdentityRegistry.removeAddressDelegated(
+      await instances.IdentityRegistry.removeAssociatedAddressDelegated(
         address.address, permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )

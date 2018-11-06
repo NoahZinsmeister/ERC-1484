@@ -68,7 +68,7 @@ function wrappedAddResolversFor(uint ein, uint8 v, bytes32 r, bytes32 s, ...) pu
 }
 ```
 
-This solution has one big drawback. Recovering the address from the signature, and checking that it belongs to the passed `EIN`, only works for signatures of the specific form above. It notably does not work for signatures prefixed with the somewhat-standard `\x19Ethereum Signed Message:\n32`. So, this method cannot be agnostic between prefixed and un-prefixed signatures unless it recovers 2 addresses and checks that either one belongs to the `EIN`, which is somewhat unwieldy. For more information see [VerifyingSignatures.md](./VerifyingSignatures.md).
+This solution has one big drawback. Recovering the address from the signature, and checking that it belongs to the passed `EIN`, only works for signatures of the specific form above. It notably does not work for signatures prefixed with the somewhat-standard `\x19Ethereum Signed Message:\n32`. So, this method cannot be agnostic between prefixed and un-prefixed signatures unless it recovers 2 addresses and checks that either one belongs to the `EIN`, which is somewhat unwieldy.
 
 ##### (**Not Recommended**) Both
 To be extra safe, one could pass both the `EIN` and the `approvingAddress`.

@@ -1,6 +1,3 @@
-const Web3 = require('web3')
-const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
-
 const { sign, verifyIdentity, timeTravel, defaultErrorMessage } = require('./common')
 const { getAddress, getSignature } = require('./signatures.js')
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
@@ -26,7 +23,7 @@ let oldAssociatedAddresses
 let newRecoveryAddress
 
 contract('Testing Identity', function (accounts) {
-  accountsPrivate = accounts.map((account, i) => { return { address: account, privateKey: privateKeys[i] } })
+  accountsPrivate = accounts.map((account, i) => { return { address: account, private: privateKeys[i] } })
 
   identity = {
     recoveryAddress:     accountsPrivate[0],
@@ -73,7 +70,7 @@ contract('Testing Identity', function (accounts) {
       let messageHash = web3.utils.soliditySha3('shh')
       for (const account of accountsPrivate) {
         for (const method of ['prefixed', 'unprefixed']) {
-          const signature = await sign(messageHash, account.address, account.privateKey, method)
+          const signature = await sign(messageHash, account.address, account.private, method)
           const isSigned = await instances.IdentityRegistry.isSigned(
             account.address, messageHash, signature.v, signature.r, signature.s
           )

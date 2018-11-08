@@ -1,6 +1,3 @@
-const Web3 = require('web3')
-const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
-
 const { sign, verifyIdentity, defaultErrorMessage } = require('../common')
 
 const IdentityRegistry = artifacts.require('./IdentityRegistry.sol')
@@ -19,7 +16,7 @@ let accountsPrivate
 let identity
 
 contract('Testing Sample Provider and Resolver', function (accounts) {
-  accountsPrivate = accounts.map((account, i) => { return { address: account, privateKey: privateKeys[i] } })
+  accountsPrivate = accounts.map((account, i) => { return { address: account, private: privateKeys[i] } })
 
   identity = {
     recoveryAddress:     accountsPrivate[0],

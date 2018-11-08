@@ -1,21 +1,10 @@
-const Web3 = require('web3')
 const ethUtil = require('ethereumjs-util')
-const web3 = new Web3(Web3.givenProvider || 'http://localhost:8545')
 
 const defaultErrorMessage = 'Returned error: VM Exception while processing transaction: revert'
 
 function sign (messageHash, address, privateKey, method) {
   return new Promise(resolve => {
-    if (method === 'unprefixed') {
-      let signature = ethUtil.ecsign(
-        Buffer.from(ethUtil.stripHexPrefix(messageHash), 'hex'),
-        Buffer.from(ethUtil.stripHexPrefix(privateKey), 'hex')
-      )
-      signature.r = ethUtil.bufferToHex(signature.r)
-      signature.s = ethUtil.bufferToHex(signature.s)
-      signature.v = parseInt(ethUtil.bufferToHex(signature.v))
-      resolve(signature)
-    } else {
+    if (method === 'prefixed') {
       web3.eth.sign(messageHash, address)
         .then(concatenatedSignature => {
           let strippedSignature = ethUtil.stripHexPrefix(concatenatedSignature)
@@ -26,6 +15,15 @@ function sign (messageHash, address, privateKey, method) {
           }
           resolve(signature)
         })
+    } else {
+      let signature = ethUtil.ecsign(
+        Buffer.from(ethUtil.stripHexPrefix(messageHash), 'hex'),
+        Buffer.from(ethUtil.stripHexPrefix(privateKey), 'hex')
+      )
+      signature.r = ethUtil.bufferToHex(signature.r)
+      signature.s = ethUtil.bufferToHex(signature.s)
+      signature.v = parseInt(ethUtil.bufferToHex(signature.v))
+      resolve(signature)
     }
   })
 }

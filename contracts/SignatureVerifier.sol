@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 /// @title Provides helper functions to determine the validity of passed signatures.
 /// @author Noah Zinsmeister

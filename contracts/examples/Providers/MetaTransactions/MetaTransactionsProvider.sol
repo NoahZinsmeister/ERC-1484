@@ -1,13 +1,12 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./ExternalProxy.sol";
 
 interface IdentityRegistryInterface {
-    function isSigned(
-        address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s
-    ) external view returns (bool);
+    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s)
+        external view returns (bool);
     function createIdentityDelegated(
-        address recoveryAddress, address associatedAddress, address[] resolvers,
+        address recoveryAddress, address associatedAddress, address[] calldata providers, address[] calldata resolvers,
         uint8 v, bytes32 r, bytes32 s, uint timestamp
     ) external returns (uint ein);
     function getEIN(address _address) external view returns (uint ein);
@@ -38,32 +37,35 @@ contract MetaTransactionsProvider is Forwarder {
 
     // create identity with meta-transaction
     function createIdentityDelegated(
-        address recoveryAddress, address associatedAddress, address[] resolvers,
+        address recoveryAddress, address associatedAddress, address[] memory resolvers,
         uint8 v, bytes32 r, bytes32 s, uint timestamp
     )
         public returns (uint ein)
     {
+        address[] memory providers = new address[](1);
+        providers[0] = address(this);
         return identityRegistry.createIdentityDelegated(
-            recoveryAddress, associatedAddress, resolvers, v, r, s, timestamp
+            recoveryAddress, associatedAddress, providers, resolvers, v, r, s, timestamp
         );
     }
 
     // internal logic for claiming an external proxy
     function claimProxy(uint ein) private {
-        address externalProxy = new ExternalProxy(ein, address(this));
+        ExternalProxy externalProxy = new ExternalProxy(ein, address(this));
 
         // register proxy in the directoy
-        externalProxyDirectory[ein] = externalProxy;
+        externalProxyDirectory[ein] = address(externalProxy);
     }
 
     // call via proxy from msg.sender
-    function callViaProxy(address destination, bytes data, bool viaExternal) public {
+    function callViaProxy(address destination, bytes memory data, bool viaExternal) public {
         callViaProxy(identityRegistry.getEIN(msg.sender), destination, data, viaExternal);
     }
 
     // call via proxy from approvingAddress with meta-transaction
     function callViaProxyDelegated(
-        address approvingAddress, address destination, bytes data, bool viaExternal, uint8 v, bytes32 r, bytes32 s
+        address approvingAddress, address destination, bytes memory data, bool viaExternal,
+        uint8 v, bytes32 r, bytes32 s
     )
         public
     {
@@ -87,14 +89,16 @@ contract MetaTransactionsProvider is Forwarder {
     }
 
     // internal logic for calling proxy
-    function callViaProxy(uint ein, address destination, bytes data, bool viaExternal) private isProviderFor(ein) {
+    function callViaProxy(uint ein, address destination, bytes memory data, bool viaExternal)
+        private isProviderFor(ein) returns (bytes memory returnData)
+    {
         if (viaExternal) {
             if (!hasExternalProxy(ein)) {
                 claimProxy(ein);
             }
-            ForwarderInterface(externalProxyDirectory[ein]).forwardCall(destination, data);            
+            return ForwarderInterface(externalProxyDirectory[ein]).forwardCall(destination, data);            
         } else {
-            forwardCall(destination, data);
+            return forwardCall(destination, data);
         }
     }
 }

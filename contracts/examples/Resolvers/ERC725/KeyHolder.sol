@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./ERC725.sol";
 
@@ -41,7 +41,7 @@ contract KeyHolder is ERC725 {
     function getKey(bytes32 _key)
         public
         view
-        returns(uint256[] purposes, uint256 keyType, bytes32 key)
+        returns(uint256[] memory purposes, uint256 keyType, bytes32 key)
     {
         return (keyHolderData.keys[_key].purposes, keyHolderData.keys[_key].keyType, keyHolderData.keys[_key].key);
     }
@@ -49,7 +49,7 @@ contract KeyHolder is ERC725 {
     function getKeyPurpose(bytes32 _key)
         public
         view
-        returns(uint256[] purposes)
+        returns(uint256[] memory purposes)
     {
         return (keyHolderData.keys[_key].purposes);
     }
@@ -57,7 +57,7 @@ contract KeyHolder is ERC725 {
     function getKeysByPurpose(uint256 _purpose)
         public
         view
-        returns(bytes32[] _keys)
+        returns(bytes32[] memory _keys)
     {
         return keyHolderData.keysByPurpose[_purpose];
     }
@@ -94,8 +94,8 @@ contract KeyHolder is ERC725 {
         if (_approve == true) {
             keyHolderData.executions[_id].approved = true;
             // solium-disable-next-line security/no-low-level-calls
-            success = keyHolderData.executions[_id].to.call(keyHolderData.executions[_id].data, 0);
-            if (success) {
+            (bool _success,) = keyHolderData.executions[_id].to.call(abi.encode(keyHolderData.executions[_id].data, 0));
+            if (_success) {
                 keyHolderData.executions[_id].executed = true;
                 emit Executed(
                     _id,
@@ -103,7 +103,7 @@ contract KeyHolder is ERC725 {
                     keyHolderData.executions[_id].value,
                     keyHolderData.executions[_id].data
                 );
-                return;
+                return true;
             } else {
                 emit ExecutionFailed(
                     _id,
@@ -111,7 +111,7 @@ contract KeyHolder is ERC725 {
                     keyHolderData.executions[_id].value,
                     keyHolderData.executions[_id].data
                 );
-                return;
+                return false;
             }
         } else {
             keyHolderData.executions[_id].approved = false;
@@ -119,7 +119,7 @@ contract KeyHolder is ERC725 {
         return true;
     }
 
-    function execute(address _to, uint256 _value, bytes _data)
+    function execute(address _to, uint256 _value, bytes memory _data)
         public
         returns (uint256 executionId)
     {

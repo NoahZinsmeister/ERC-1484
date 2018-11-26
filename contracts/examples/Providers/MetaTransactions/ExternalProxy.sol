@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./Forwarder.sol";
 
@@ -17,7 +17,9 @@ contract ExternalProxy is Forwarder {
         _;
     }
 
-    function forwardCall(address destination, bytes memory data) public onlyAllowedCaller() {
-        super.forwardCall(destination, data);
+    function forwardCall(address destination, bytes memory data)
+        public onlyAllowedCaller() returns (bytes memory returnData)
+    {
+        return super.forwardCall(destination, data);
     }
 }

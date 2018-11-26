@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 interface IdentityRegistryInterface {
     function isSigned(
@@ -14,8 +14,8 @@ interface EthereumDIDRegistryInterface {
     function changeOwnerSigned(address identity, uint8 sigV, bytes32 sigR, bytes32 sigS, address newOwner) external;
     function addDelegate      (address identity, bytes32 delegateType, address delegate, uint validity) external;
     function revokeDelegate   (address identity, bytes32 delegateType, address delegate) external;
-    function setAttribute     (address identity, bytes32 name, bytes value, uint validity) external;
-    function revokeAttribute  (address identity, bytes32 name, bytes value) external;
+    function setAttribute     (address identity, bytes32 name, bytes calldata value, uint validity) external;
+    function revokeAttribute  (address identity, bytes32 name, bytes calldata value) external;
 }
 
 contract ERC1056 {
@@ -131,13 +131,13 @@ contract ERC1056 {
         ethereumDIDRegistry.revokeDelegate(_did, _delegateType, _delegate);
     }
 
-    function setAttribute(bytes32 name, bytes value, uint validity) public {
+    function setAttribute(bytes32 name, bytes memory value, uint validity) public {
         uint ein = identityRegistry.getEIN(msg.sender);
         _setAttribute(einToDID[ein], name, value, validity);
     }
 
     function setAttributeDelegated(
-        address approvingAddress, bytes32 name, bytes value, uint validity, uint8 v, bytes32 r, bytes32 s
+        address approvingAddress, bytes32 name, bytes memory value, uint validity, uint8 v, bytes32 r, bytes32 s
     )
         public
     {
@@ -159,18 +159,18 @@ contract ERC1056 {
         _setAttribute(einToDID[ein], name, value, validity);
     }
 
-    function _setAttribute(address _did, bytes32 _name, bytes _value, uint _validity) internal {
+    function _setAttribute(address _did, bytes32 _name, bytes memory _value, uint _validity) internal {
         require(_did != address(0), "This EIN has not been initialized");
         ethereumDIDRegistry.setAttribute(_did, _name, _value, _validity);
     }
 
-    function revokeAttribute(bytes32 name, bytes value) public {
+    function revokeAttribute(bytes32 name, bytes memory value) public {
         uint ein = identityRegistry.getEIN(msg.sender);
         _revokeAttribute(einToDID[ein], name, value);
     }
 
     function revokeAttributeDelegated(
-        address approvingAddress, bytes32 name, bytes value, uint8 v, bytes32 r, bytes32 s
+        address approvingAddress, bytes32 name, bytes memory value, uint8 v, bytes32 r, bytes32 s
     )
         public
     {
@@ -192,7 +192,7 @@ contract ERC1056 {
         _revokeAttribute(einToDID[ein], name, value);
     }
 
-    function _revokeAttribute(address _did, bytes32 _name, bytes _value) internal {
+    function _revokeAttribute(address _did, bytes32 _name, bytes memory _value) internal {
         require(_did != address(0), "This EIN has not been initialized");
         ethereumDIDRegistry.revokeAttribute(_did, _name, _value);
     }

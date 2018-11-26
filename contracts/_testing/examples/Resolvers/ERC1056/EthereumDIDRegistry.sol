@@ -1,4 +1,4 @@
-pragma solidity ^0.4.4;
+pragma solidity ^0.5.0;
 
 contract EthereumDIDRegistry {
 
@@ -36,7 +36,7 @@ contract EthereumDIDRegistry {
 
     function identityOwner(address identity) public view returns(address) {
         address owner = owners[identity];
-        if (owner != 0x0) {
+        if (owner != address(0)) {
             return owner;
         }
         return identity;
@@ -99,30 +99,30 @@ contract EthereumDIDRegistry {
         revokeDelegate(identity, checkSignature(identity, sigV, sigR, sigS, hash), delegateType, delegate);
     }
 
-    function setAttribute(address identity, address actor, bytes32 name, bytes value, uint validity ) internal onlyOwner(identity, actor) {
+    function setAttribute(address identity, address actor, bytes32 name, bytes memory value, uint validity ) internal onlyOwner(identity, actor) {
         emit DIDAttributeChanged(identity, name, value, now + validity, changed[identity]);
         changed[identity] = block.number;
     }
 
-    function setAttribute(address identity, bytes32 name, bytes value, uint validity) public {
+    function setAttribute(address identity, bytes32 name, bytes memory value, uint validity) public {
         setAttribute(identity, msg.sender, name, value, validity);
     }
 
-    function setAttributeSigned(address identity, uint8 sigV, bytes32 sigR, bytes32 sigS, bytes32 name, bytes value, uint validity) public {
+    function setAttributeSigned(address identity, uint8 sigV, bytes32 sigR, bytes32 sigS, bytes32 name, bytes memory value, uint validity) public {
         bytes32 hash = keccak256(abi.encodePacked(byte(0x19), byte(0), this, nonce[identityOwner(identity)], identity, "setAttribute", name, value, validity));
         setAttribute(identity, checkSignature(identity, sigV, sigR, sigS, hash), name, value, validity);
     }
 
-    function revokeAttribute(address identity, address actor, bytes32 name, bytes value ) internal onlyOwner(identity, actor) {
+    function revokeAttribute(address identity, address actor, bytes32 name, bytes memory value ) internal onlyOwner(identity, actor) {
         emit DIDAttributeChanged(identity, name, value, 0, changed[identity]);
         changed[identity] = block.number;
     }
 
-    function revokeAttribute(address identity, bytes32 name, bytes value) public {
+    function revokeAttribute(address identity, bytes32 name, bytes memory value) public {
         revokeAttribute(identity, msg.sender, name, value);
     }
 
-    function revokeAttributeSigned(address identity, uint8 sigV, bytes32 sigR, bytes32 sigS, bytes32 name, bytes value) public {
+    function revokeAttributeSigned(address identity, uint8 sigV, bytes32 sigR, bytes32 sigS, bytes32 name, bytes memory value) public {
         bytes32 hash = keccak256(abi.encodePacked(byte(0x19), byte(0), this, nonce[identityOwner(identity)], identity, "revokeAttribute", name, value));
         revokeAttribute(identity, checkSignature(identity, sigV, sigR, sigS, hash), name, value);
     }

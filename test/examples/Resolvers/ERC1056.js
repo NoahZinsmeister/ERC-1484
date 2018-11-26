@@ -29,7 +29,7 @@ contract('Testing ERC1056 Resolver', function (accounts) {
       const user = users[0]
 
       await instances.IdentityRegistry.createIdentity(
-        user.address, user.address, [instances.ERC1056.address], { from: user.address }
+        user.address, [user.address], [instances.ERC1056.address], { from: user.address }
       )
 
       user.identity = web3.utils.toBN(1)

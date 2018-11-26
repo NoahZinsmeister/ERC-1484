@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./ERC735.sol";
 import "./KeyHolder.sol";
@@ -25,9 +25,9 @@ contract ClaimHolder is KeyHolder, ERC735 {
         uint256 _topic,
         uint256 _scheme,
         address _issuer,
-        bytes _signature,
-        bytes _data,
-        string _uri
+        bytes memory _signature,
+        bytes memory _data,
+        string memory _uri
     )
         public
         returns (bytes32 claimRequestId)
@@ -88,9 +88,9 @@ contract ClaimHolder is KeyHolder, ERC735 {
             uint256 claimType,
             uint256 scheme,
             address issuer,
-            bytes signature,
-            bytes data,
-            string uri
+            bytes memory signature,
+            bytes memory data,
+            string memory uri
         )
     {
         return (
@@ -106,7 +106,7 @@ contract ClaimHolder is KeyHolder, ERC735 {
     function getClaimIdsByTopic(uint256 _topic)
         public
         view
-        returns(bytes32[] claimIds)
+        returns(bytes32[] memory claimIds)
     {
         return claims.byTopic[_topic];
     }

@@ -82,7 +82,7 @@ contract('Testing Identity', function (accounts) {
     it('Identity can be created', async function () {
       // test user creation
       const createdIdentity = await instances.IdentityRegistry.createIdentity.call(
-        identity.recoveryAddress.address, identity.providers[0].address, [],
+        identity.recoveryAddress.address, [identity.providers[0].address], [], [],
         { from: identity.associatedAddresses[0].address }
       )
       assert.isTrue(createdIdentity.eq(web3.utils.toBN(1)), 'Unexpected identity token user')
@@ -102,7 +102,7 @@ contract('Testing Identity', function (accounts) {
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
       const createdIdentityDelegated = await instances.IdentityRegistry.createIdentityDelegated.call(
-        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [],
+        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [identity.providers[0].address], [],
         permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
@@ -125,7 +125,7 @@ contract('Testing Identity', function (accounts) {
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
       await instances.IdentityRegistry.createIdentityDelegated.call(
-        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [],
+        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [identity.providers[0].address], [],
         permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
@@ -155,7 +155,7 @@ contract('Testing Identity', function (accounts) {
         permissionString, identity.associatedAddresses[0].address, identity.associatedAddresses[0].private
       )
       await instances.IdentityRegistry.createIdentityDelegated.call(
-        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [],
+        identity.recoveryAddress.address, identity.associatedAddresses[0].address, [identity.providers[0].address], [],
         permission.v, permission.r, permission.s, timestamp,
         { from: identity.providers[0].address }
       )
@@ -171,7 +171,7 @@ contract('Testing Identity', function (accounts) {
 
     it('Identity created', async function () {
       await instances.IdentityRegistry.createIdentity(
-        identity.recoveryAddress.address, identity.providers[0].address, [],
+        identity.recoveryAddress.address, [identity.providers[0].address], [],
         { from: identity.associatedAddresses[0].address }
       )
 
@@ -187,7 +187,7 @@ contract('Testing Identity', function (accounts) {
 
     it('Identity created FAIL -- has an address', async function () {
       await instances.IdentityRegistry.createIdentity(
-        identity.recoveryAddress.address, identity.providers[0].address, [],
+        identity.recoveryAddress.address, [identity.providers[0].address], [],
         { from: identity.associatedAddresses[0].address }
       )
         .then(() => assert.fail('got an EIN', 'transaction should fail'))

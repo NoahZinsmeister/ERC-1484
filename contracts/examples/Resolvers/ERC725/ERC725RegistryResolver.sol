@@ -1,11 +1,14 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./ClaimHolder.sol";
 
 contract IdentityRegistryInterface {
     function getEIN(address _address) public view returns (uint ein);
     function getIdentity(uint ein) public view
-        returns (address recoveryAddress, address[] associatedAddresses, address[] providers, address[] resolvers);
+        returns (
+            address recoveryAddress,
+            address[] memory associatedAddresses, address[] memory providers, address[] memory resolvers
+        );
 }
 
 contract ERC725RegistryResolver {
@@ -27,8 +30,9 @@ contract ERC725RegistryResolver {
         // TODO: change this if addKey implementation changes s.t. it can return false
         claim.addKey(keccak256(abi.encodePacked(msg.sender)), 1, 1);
 
-        einTo725[ein] = claim;
-        return(claim);
+        einTo725[ein] = address(claim);
+
+        return(address(claim));
     }
 
     function claim725(address _contract) public returns(bool) {

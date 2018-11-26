@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./AddressSet.sol";
 
@@ -23,7 +23,7 @@ contract AddressSetTest {
         return mySet.length();
     }
 
-    function members() public view returns (address[]) {
+    function members() public view returns (address[] memory) {
         return mySet.members;
     }
 

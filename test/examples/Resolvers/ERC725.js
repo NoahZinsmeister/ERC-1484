@@ -28,11 +28,11 @@ contract('Testing ERC725 Resolver', function (accounts) {
       const otherGuy = users[1]
 
       await instances.IdentityRegistry.createIdentity(
-        user.address, user.address, [instances.ERC725.address], { from: user.address }
+        user.address, [user.address], [instances.ERC725.address], { from: user.address }
       )
 
       await instances.IdentityRegistry.createIdentity(
-        otherGuy.address, otherGuy.address, [instances.ERC725.address], { from: otherGuy.address }
+        otherGuy.address, [otherGuy.address], [instances.ERC725.address], { from: otherGuy.address }
       )
 
       user.identity = web3.utils.toBN(1)

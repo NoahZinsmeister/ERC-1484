@@ -1,11 +1,14 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 contract ForwarderInterface {
-    function forwardCall(address destination, bytes memory data) public;
+    function forwardCall(address destination, bytes memory data) public returns (bytes memory returnData);
 }
 
 contract Forwarder is ForwarderInterface {
-    function forwardCall(address destination, bytes memory data) public {
-        require(destination.call(data), "Call was not successful."); // solium-disable-line security/no-low-level-calls
+    function forwardCall(address destination, bytes memory data) public returns (bytes memory returnData) {
+        // solium-disable-next-line security/no-low-level-calls
+        (bool success, bytes memory _returnData) = destination.call(data);
+        require(success, "Call was not successful.");
+        return _returnData;
     }
 }

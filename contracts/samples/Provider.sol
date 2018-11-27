@@ -1,24 +1,6 @@
 pragma solidity ^0.5.0;
 
-interface IdentityRegistryInterface {
-    function getEIN(address _address) external view returns (uint ein);
-    function createIdentityDelegated(
-        address recoveryAddress, address associatedAddress, address[] calldata providers, address[] calldata resolvers,
-        uint8 v, bytes32 r, bytes32 s, uint timestamp
-    ) external returns (uint ein);
-    function addAssociatedAddressDelegated(
-        address approvingAddress, address addressToAdd,
-        uint8[2] calldata v, bytes32[2] calldata r, bytes32[2] calldata s, uint[2] calldata timestamp
-    ) external;
-    function removeAssociatedAddressDelegated(
-        address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint timestamp
-    ) external;
-    function addProvidersFor(uint ein, address[] calldata providers) external;
-    function removeProvidersFor(uint ein, address[] calldata providers) external;
-    function addResolversFor(uint ein, address[] calldata resolvers) external;
-    function removeResolversFor(uint ein, address[] calldata resolvers) external;
-    function triggerRecoveryAddressChangeFor(uint ein, address newRecoveryAddress) external;
-}
+import "../interfaces/IdentityRegistryInterface.sol";
 
 contract Provider {
     IdentityRegistryInterface identityRegistry;

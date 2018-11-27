@@ -1,18 +1,9 @@
 pragma solidity ^0.5.0;
 
 import "./ClaimHolder.sol";
-
-contract IdentityRegistryInterface {
-    function getEIN(address _address) public view returns (uint ein);
-    function getIdentity(uint ein) public view
-        returns (
-            address recoveryAddress,
-            address[] memory associatedAddresses, address[] memory providers, address[] memory resolvers
-        );
-}
+import "../../../interfaces/IdentityRegistryInterface.sol";
 
 contract ERC725RegistryResolver {
-
     IdentityRegistryInterface registry;
 
     constructor (address _identityRegistryAddress) public {

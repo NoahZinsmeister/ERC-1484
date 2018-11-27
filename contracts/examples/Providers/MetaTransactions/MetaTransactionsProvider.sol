@@ -1,17 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./ExternalProxy.sol";
-
-interface IdentityRegistryInterface {
-    function isSigned(address _address, bytes32 messageHash, uint8 v, bytes32 r, bytes32 s)
-        external view returns (bool);
-    function createIdentityDelegated(
-        address recoveryAddress, address associatedAddress, address[] calldata providers, address[] calldata resolvers,
-        uint8 v, bytes32 r, bytes32 s, uint timestamp
-    ) external returns (uint ein);
-    function getEIN(address _address) external view returns (uint ein);
-    function isProviderFor(uint ein, address provider) external view returns (bool);
-}
+import "../../../interfaces/IdentityRegistryInterface.sol";
 
 contract MetaTransactionsProvider is Forwarder {
     IdentityRegistryInterface identityRegistry;

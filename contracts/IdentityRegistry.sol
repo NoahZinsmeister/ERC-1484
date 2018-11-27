@@ -472,7 +472,7 @@ contract IdentityRegistry is SignatureVerifier {
             "Permission denied."
         );
 
-        // log the old associated addresses to unlock the poison pill
+        // log the old associated addresses to facilitate destruction if necessary
         recoveryLogs[ein] = Recovery(
             block.timestamp, // solium-disable-line security/no-block-members
             keccak256(abi.encodePacked(_identity.associatedAddresses.members))
@@ -488,11 +488,11 @@ contract IdentityRegistry is SignatureVerifier {
     }
 
     /// @notice Allows associated addresses recently removed via recovery to permanently disable their old Identity.
-    /// @param ein The EIN to trigger the poison pill for.
+    /// @param ein The EIN to trigger destruction of.
     /// @param firstChunk The array of addresses before the msg.sender in the pre-recovery associated addresses array.
     /// @param lastChunk The array of addresses after the msg.sender in the pre-recovery associated addresses array.
-    /// @param resetResolvers true if the poisonser wants resolvers to be removed, false otherwise.
-    function triggerPoisonPill(uint ein, address[] memory firstChunk, address[] memory lastChunk, bool resetResolvers)
+    /// @param resetResolvers true if the destroyer wants resolvers to be removed, false otherwise.
+    function triggerDestruction(uint ein, address[] memory firstChunk, address[] memory lastChunk, bool resetResolvers)
         public _identityExists(ein)
     {
         require(!canRecover(ein), "Recovery has not recently been triggered.");
@@ -504,10 +504,10 @@ contract IdentityRegistry is SignatureVerifier {
             keccak256(
                 abi.encodePacked(firstChunk, middleChunk, lastChunk)
             ) == recoveryLogs[ein].hashedOldAssociatedAddresses,
-            "Cannot activate the poison pill from an address that was not recently removed via recovery."
+            "Cannot destroy an EIN from an address that was not recently removed from said EIN via recovery."
         );
 
-        emit IdentityPoisoned(msg.sender, ein, _identity.recoveryAddress, resetResolvers);
+        emit IdentityDestroyed(msg.sender, ein, _identity.recoveryAddress, resetResolvers);
 
         resetIdentityData(_identity, resetResolvers);
     }
@@ -544,5 +544,5 @@ contract IdentityRegistry is SignatureVerifier {
     event RecoveryTriggered(
         address indexed initiator, uint indexed ein, address[] oldAssociatedAddresses, address newAssociatedAddress
     );
-    event IdentityPoisoned(address indexed initiator, uint indexed ein, address recoveryAddress, bool resolversReset);
+    event IdentityDestroyed(address indexed initiator, uint indexed ein, address recoveryAddress, bool resolversReset);
 }

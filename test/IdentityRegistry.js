@@ -365,7 +365,7 @@ contract('Testing Identity', function (accounts) {
       }
     })
 
-    it('estimating poison pill cost', async function () {
+    it('estimating destruction cost', async function () {
       const newAssociatedAddress = accountsPrivate[9]
       const timestamp = Math.round(new Date() / 1000) - 1
       const permissionString = web3.utils.soliditySha3(
@@ -746,8 +746,8 @@ contract('Testing Identity', function (accounts) {
         ))
     })
 
-    it('Cannot trigger poison pill', async function () {
-      await instances.IdentityRegistry.triggerPoisonPill.call(identity.identity, [], [], true, { from: accounts[0] })
+    it('Cannot trigger destruction', async function () {
+      await instances.IdentityRegistry.triggerDestruction.call(identity.identity, [], [], true, { from: accounts[0] })
         .then(() => assert.fail('old recovery address triggered recovery', 'transaction should fail'))
         .catch(error => {
           if (error.message !== defaultErrorMessage) {
@@ -803,26 +803,26 @@ contract('Testing Identity', function (accounts) {
     })
   })
 
-  describe('Testing Poison Pill', function () {
-    it('Any of the recently removed address can trigger poison pill', async function () {
+  describe('Testing Destruction', function () {
+    it('Any of the recently removed address can trigger destruction', async function () {
       await Promise.all(oldAssociatedAddresses.map(address => {
         const indexOf = oldAssociatedAddresses.indexOf(address)
 
         const firstChunk = oldAssociatedAddresses.slice(0, indexOf)
         const lastChunk = oldAssociatedAddresses.slice(indexOf + 1)
 
-        return instances.IdentityRegistry.triggerPoisonPill.call(
+        return instances.IdentityRegistry.triggerDestruction.call(
           identity.identity, firstChunk, lastChunk, true, { from: address }
         )
       }))
     })
 
-    it('Any of the recently removed address can trigger poison pill -- FAIL', async function () {
+    it('Any of the recently removed address can trigger destruction -- FAIL', async function () {
       const indexOf = oldAssociatedAddresses.indexOf(oldAssociatedAddresses[0])
       const firstChunk = oldAssociatedAddresses.slice(0, indexOf)
       const lastChunk = oldAssociatedAddresses.slice(indexOf + 1)
 
-      await instances.IdentityRegistry.triggerPoisonPill.call(
+      await instances.IdentityRegistry.triggerDestruction.call(
         identity.identity, firstChunk, lastChunk, true, { from: accounts[0] }
       )
         .then(() => assert.fail('recovery was triggered after recently recovering', 'transaction should fail'))
@@ -830,20 +830,20 @@ contract('Testing Identity', function (accounts) {
           if (error.message !== defaultErrorMessage) {
             assert.include(
               error.message,
-              'Cannot activate the poison pill from an address that was not recently removed via recovery.',
+              'Cannot destroy an EIN from an address that was not recently removed from said EIN via recovery.',
               'wrong rejection reason'
             )
           }
         })
     })
 
-    it('Triggering poison pill on an identity works as expected', async function () {
+    it('Triggering destruction on an identity works as expected', async function () {
       const indexOf = oldAssociatedAddresses.indexOf(identity.associatedAddresses[1].address)
 
       const firstChunk = oldAssociatedAddresses.slice(0, indexOf)
       const lastChunk = oldAssociatedAddresses.slice(indexOf + 1)
 
-      await instances.IdentityRegistry.triggerPoisonPill(
+      await instances.IdentityRegistry.triggerDestruction(
         identity.identity, firstChunk, lastChunk, true, { from: identity.associatedAddresses[1].address }
       )
 

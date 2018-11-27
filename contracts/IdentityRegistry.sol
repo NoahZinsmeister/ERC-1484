@@ -183,7 +183,7 @@ contract IdentityRegistry is SignatureVerifier {
     // Identity Management Functions ///////////////////////////////////////////////////////////////////////////////////
 
     /// @notice Create an new Identity for the transaction sender.
-    /// @dev Sets the msg.sender as the only Associated Address.
+    /// @dev Sets the msg.sender as the only associatedAddress.
     /// @param recoveryAddress A recovery address to set for the new Identity.
     /// @param providers A list of providers to set for the new Identity.
     /// @param resolvers A list of resolvers to set for the new Identity.
@@ -194,8 +194,7 @@ contract IdentityRegistry is SignatureVerifier {
         return createIdentity(recoveryAddress, msg.sender, providers, resolvers, false);
     }
 
-    /// @notice Allows a Provider to create an new Identity for the passed associatedAddress.
-    /// @dev Sets the msg.sender as the only provider.
+    /// @notice Allows creation of a new Identity for the passed associatedAddress.
     /// @param recoveryAddress A recovery address to set for the new Identity.
     /// @param associatedAddress An associated address to set for the new Identity (must have produced the signature).
     /// @param providers A list of providers to set for the new Identity.
@@ -218,7 +217,7 @@ contract IdentityRegistry is SignatureVerifier {
                     abi.encodePacked(
                         byte(0x19), byte(0), address(this),
                         "I authorize the creation of an Identity on my behalf.",
-                        recoveryAddress, associatedAddress, msg.sender, resolvers, timestamp
+                        recoveryAddress, associatedAddress, providers, resolvers, timestamp
                     )
                 ),
                 v, r, s
@@ -242,19 +241,56 @@ contract IdentityRegistry is SignatureVerifier {
         _identity.recoveryAddress = recoveryAddress;
         _identity.associatedAddresses.insert(associatedAddress);
         associatedAddressDirectory[associatedAddress] = ein;
-        for (uint i; i < providers.length; i++) {
+        for (uint i; i < providers.length; i++)
             _identity.providers.insert(providers[i]);
-        }
-        for (uint j; j < resolvers.length; j++) {
+        for (uint j; j < resolvers.length; j++)
             _identity.resolvers.insert(resolvers[j]);
-        }
 
         emit IdentityCreated(msg.sender, ein, recoveryAddress, associatedAddress, providers, resolvers, delegated);
 
         return ein;
     }
 
-    /// @notice Allows providers to add an associated address to an Identity.
+
+    /// @notice Allows an associated address to add another associated address to its Identity.
+    /// @param addressToAdd A new address to set for the Identity of the sender.
+    /// @param v The v component of the signature.
+    /// @param r The r component of the signature.
+    /// @param s The s component of the signature.
+    /// @param timestamp The timestamp of the signature.
+    function addAssociatedAddress(
+        address approvingAddress, address addressToAdd, uint8 v, bytes32 r, bytes32 s, uint timestamp
+    )
+        public ensureSignatureTimeValid(timestamp)
+    {
+        bool fromApprovingAddress = msg.sender == approvingAddress;
+        require(fromApprovingAddress || msg.sender == addressToAdd, "One or both of the passed addresses are malformed.");
+
+        uint ein = getEIN(approvingAddress);
+
+        require(
+            isSigned(
+                fromApprovingAddress ? addressToAdd : approvingAddress,
+                keccak256(
+                    abi.encodePacked(
+                        byte(0x19), byte(0), address(this),
+                        fromApprovingAddress ?
+                            "I authorize being added to this Identity." :
+                            "I authorize adding this address to my Identity.",
+                        ein, addressToAdd, timestamp
+                    )
+                ),
+                v, r, s
+            ),
+            "Permission denied."
+        );
+
+        addAssociatedAddress(ein, addressToAdd);
+
+        emit AssociatedAddressAdded(msg.sender, ein, approvingAddress, addressToAdd, false);
+    }
+
+    /// @notice Allows addition of an associated address to an Identity.
     /// @dev The first signature must be that of the approvingAddress.
     /// @param approvingAddress An associated address for an Identity.
     /// @param addressToAdd A new address to set for the Identity of approvingAddress.
@@ -266,15 +302,9 @@ contract IdentityRegistry is SignatureVerifier {
         address approvingAddress, address addressToAdd,
         uint8[2] memory v, bytes32[2] memory r, bytes32[2] memory s, uint[2] memory timestamp
     )
-        public _hasIdentity(addressToAdd, false)
-        ensureSignatureTimeValid(timestamp[0]) ensureSignatureTimeValid(timestamp[1])
+        public ensureSignatureTimeValid(timestamp[0]) ensureSignatureTimeValid(timestamp[1])
     {
         uint ein = getEIN(approvingAddress);
-
-        require(isProviderFor(ein, msg.sender), "The identity has not set the passed provider.");
-        require(
-            identityDirectory[ein].associatedAddresses.length() < maxAssociatedAddresses, "Too many addresses."
-        );
 
         require(
             isSigned(
@@ -305,13 +335,31 @@ contract IdentityRegistry is SignatureVerifier {
             "Permission denied from address to add."
         );
 
-        identityDirectory[ein].associatedAddresses.insert(addressToAdd);
-        associatedAddressDirectory[addressToAdd] = ein;
+        addAssociatedAddress(ein, addressToAdd);
 
-        emit AssociatedAddressAdded(msg.sender, ein, approvingAddress, addressToAdd);
+        emit AssociatedAddressAdded(msg.sender, ein, approvingAddress, addressToAdd, true);
     }
 
-    /// @notice Allows providers to remove an associated address from an Identity.
+    /// @dev Common logic for all address addition.
+    function addAssociatedAddress(uint ein, address addressToAdd) private _hasIdentity(addressToAdd, false) {
+        require(
+            identityDirectory[ein].associatedAddresses.length() < maxAssociatedAddresses, "Too many addresses."
+        );
+
+        identityDirectory[ein].associatedAddresses.insert(addressToAdd);
+        associatedAddressDirectory[addressToAdd] = ein;
+    }
+
+    /// @notice Allows an associated address to remove itself from its Identity.
+    function removeAssociatedAddress() public {
+        uint ein = getEIN(msg.sender);
+
+        removeAssociatedAddress(ein, msg.sender);
+
+        emit AssociatedAddressRemoved(msg.sender, ein, msg.sender, false);
+    }
+
+    /// @notice Allows removal of an associated address from an Identity.
     /// @param addressToRemove An associated address to remove from its Identity.
     /// @param v The v component of the signature.
     /// @param r The r component of the signature.
@@ -321,8 +369,6 @@ contract IdentityRegistry is SignatureVerifier {
         public ensureSignatureTimeValid(timestamp)
     {
         uint ein = getEIN(addressToRemove);
-
-        require(isProviderFor(ein, msg.sender), "The identity has not set the passed provider.");
 
         require(
             isSigned(
@@ -339,11 +385,17 @@ contract IdentityRegistry is SignatureVerifier {
             "Permission denied."
         );
 
+        removeAssociatedAddress(ein, addressToRemove);
+
+        emit AssociatedAddressRemoved(msg.sender, ein, addressToRemove, true);
+    }
+
+    /// @dev Common logic for all address removal.
+    function removeAssociatedAddress(uint ein, address addressToRemove) private {
         identityDirectory[ein].associatedAddresses.remove(addressToRemove);
         delete associatedAddressDirectory[addressToRemove];
-
-        emit AssociatedAddressRemoved(msg.sender, ein, addressToRemove);
     }
+
 
     /// @notice Allows an associated address to add providers to its Identity.
     /// @param providers A list of providers.
@@ -389,36 +441,70 @@ contract IdentityRegistry is SignatureVerifier {
         }
     }
 
+    /// @notice Allows an associated address to add resolvers to its Identity.
+    /// @param resolvers A list of resolvers.
+    function addResolvers(address[] memory resolvers) public {
+        addResolvers(getEIN(msg.sender), resolvers, false);
+    }
+
     /// @notice Allows providers to add resolvers to an Identity.
     /// @param ein The EIN to add resolvers to.
-    /// @param resolvers A list of providers.
+    /// @param resolvers A list of resolvers.
     function addResolversFor(uint ein, address[] memory resolvers) public _isProviderFor(ein) {
+        addResolvers(ein, resolvers, true);
+    }
+
+    /// @dev Common logic for all resolver adding.
+    function addResolvers(uint ein, address[] memory resolvers, bool delegated) private {
         Identity storage _identity = identityDirectory[ein];
         for (uint i; i < resolvers.length; i++) {
             _identity.resolvers.insert(resolvers[i]);
-            emit ResolverAdded(msg.sender, ein, resolvers[i]);
+            emit ResolverAdded(msg.sender, ein, resolvers[i], delegated);
         }
+    }
+
+    /// @notice Allows an associated address to remove resolvers from its Identity.
+    /// @param resolvers A list of resolvers.
+    function removeResolvers(address[] memory resolvers) public {
+        removeResolvers(getEIN(msg.sender), resolvers, true);
     }
 
     /// @notice Allows providers to remove resolvers from an Identity.
     /// @param ein The EIN to remove resolvers from.
-    /// @param resolvers A list of providers.
+    /// @param resolvers A list of resolvers.
     function removeResolversFor(uint ein, address[] memory resolvers) public _isProviderFor(ein) {
+        removeResolvers(ein, resolvers, true);
+    }
+
+    /// @dev Common logic for all resolver removal.
+    function removeResolvers(uint ein, address[] memory resolvers, bool delegated) private {
         Identity storage _identity = identityDirectory[ein];
         for (uint i; i < resolvers.length; i++) {
             _identity.resolvers.remove(resolvers[i]);
-            emit ResolverRemoved(msg.sender, ein, resolvers[i]);
+            emit ResolverRemoved(msg.sender, ein, resolvers[i], delegated);
         }
     }
 
 
     // Recovery Management Functions ///////////////////////////////////////////////////////////////////////////////////
 
+    /// @notice Allows an associated address to change the recovery address for its Identity.
+    /// @dev Recovery addresses can be changed at most once every recoveryTimeout seconds.
+    /// @param newRecoveryAddress A recovery address to set for the sender's EIN.
+    function triggerRecoveryAddressChange(address newRecoveryAddress) public {
+        triggerRecoveryAddressChange(getEIN(msg.sender), newRecoveryAddress, false);
+    }
+
     /// @notice Allows providers to change the recovery address for an Identity.
     /// @dev Recovery addresses can be changed at most once every recoveryTimeout seconds.
     /// @param ein The EIN to set the recovery address of.
     /// @param newRecoveryAddress A recovery address to set for the passed EIN.
     function triggerRecoveryAddressChangeFor(uint ein, address newRecoveryAddress) public _isProviderFor(ein) {
+        triggerRecoveryAddressChange(ein, newRecoveryAddress, true);
+    }
+
+    /// @dev Common logic for all recovery address changes.
+    function triggerRecoveryAddressChange(uint ein, address newRecoveryAddress, bool delegated) private {
         Identity storage _identity = identityDirectory[ein];
 
         require(canChangeRecoveryAddress(ein), "Cannot trigger a change in recovery address yet.");
@@ -426,7 +512,7 @@ contract IdentityRegistry is SignatureVerifier {
          // solium-disable-next-line security/no-block-members
         recoveryAddressChangeLogs[ein] = RecoveryAddressChange(block.timestamp, _identity.recoveryAddress);
 
-        emit RecoveryAddressChangeTriggered(msg.sender, ein, _identity.recoveryAddress, newRecoveryAddress);
+        emit RecoveryAddressChangeTriggered(msg.sender, ein, _identity.recoveryAddress, newRecoveryAddress, delegated);
 
         _identity.recoveryAddress = newRecoveryAddress;
     }
@@ -531,15 +617,16 @@ contract IdentityRegistry is SignatureVerifier {
         address recoveryAddress, address associatedAddress, address[] providers, address[] resolvers, bool delegated
     );
     event AssociatedAddressAdded(
-        address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress
+        address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress, bool delegated
     );
-    event AssociatedAddressRemoved(address indexed initiator, uint indexed ein, address removedAddress);
+    event AssociatedAddressRemoved(address indexed initiator, uint indexed ein, address removedAddress, bool delegated);
     event ProviderAdded(address indexed initiator, uint indexed ein, address provider, bool delegated);
     event ProviderRemoved(address indexed initiator, uint indexed ein, address provider, bool delegated);
-    event ResolverAdded(address indexed initiator, uint indexed ein, address resolvers);
-    event ResolverRemoved(address indexed initiator, uint indexed ein, address resolvers);
+    event ResolverAdded(address indexed initiator, uint indexed ein, address resolvers, bool delegated);
+    event ResolverRemoved(address indexed initiator, uint indexed ein, address resolvers, bool delegated);
     event RecoveryAddressChangeTriggered(
-        address indexed initiator, uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress
+        address indexed initiator, uint indexed ein,
+        address oldRecoveryAddress, address newRecoveryAddress, bool delegated
     );
     event RecoveryTriggered(
         address indexed initiator, uint indexed ein, address[] oldAssociatedAddresses, address newAssociatedAddress

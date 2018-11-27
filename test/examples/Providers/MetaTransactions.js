@@ -7,7 +7,7 @@ const MetaTransactionsProvider = artifacts.require('./examples/Providers/MetaTra
 const instances = {}
 
 var user
-contract('Testing ERC1056 Resolver', function (accounts) {
+contract('Testing MetaTransactions Provider', function (accounts) {
   const users = [
     {
       address: accounts[1],
@@ -30,7 +30,11 @@ contract('Testing ERC1056 Resolver', function (accounts) {
     const permissionString = web3.utils.soliditySha3(
       '0x19', '0x00', instances.IdentityRegistry.address,
       'I authorize the creation of an Identity on my behalf.',
-      user.address, user.address, instances.MetaTransactionsProvider.address, { t: 'address[]', v: [] }, timestamp
+      user.address,
+      user.address,
+      { t: 'address[]', v: [instances.MetaTransactionsProvider.address] },
+      { t: 'address[]', v: [] },
+      timestamp
     )
     const permission = await sign(permissionString, user.address, user.private)
 

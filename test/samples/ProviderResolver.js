@@ -46,7 +46,7 @@ contract('Testing Sample Provider and Resolver', function (accounts) {
         'I authorize the creation of an Identity on my behalf.',
         identity.recoveryAddress.address,
         identity.associatedAddresses[0].address,
-        instances.Provider.address,
+        { t: 'address[]', v: [instances.Provider.address] },
         { t: 'address[]', v: [identity.resolver] },
         timestamp
       )

@@ -23,20 +23,27 @@ interface IdentityRegistryInterface {
         address recoveryAddress, address associatedAddress, address[] calldata providers, address[] calldata resolvers,
         uint8 v, bytes32 r, bytes32 s, uint timestamp
     ) external returns (uint ein);
+    function addAssociatedAddress(
+        address approvingAddress, address addressToAdd, uint8 v, bytes32 r, bytes32 s, uint timestamp
+    ) external;
     function addAssociatedAddressDelegated(
         address approvingAddress, address addressToAdd,
         uint8[2] calldata v, bytes32[2] calldata r, bytes32[2] calldata s, uint[2] calldata timestamp
     ) external;
+    function removeAssociatedAddress() external;
     function removeAssociatedAddressDelegated(address addressToRemove, uint8 v, bytes32 r, bytes32 s, uint timestamp)
         external;
     function addProviders(address[] calldata providers) external;
     function addProvidersFor(uint ein, address[] calldata providers) external;
     function removeProviders(address[] calldata providers) external;
     function removeProvidersFor(uint ein, address[] calldata providers) external;
+    function addResolvers(address[] calldata resolvers) external;
     function addResolversFor(uint ein, address[] calldata resolvers) external;
+    function removeResolvers(address[] calldata resolvers) external;
     function removeResolversFor(uint ein, address[] calldata resolvers) external;
 
     // Recovery Management Functions ///////////////////////////////////////////////////////////////////////////////////
+    function triggerRecoveryAddressChange(address newRecoveryAddress) external;
     function triggerRecoveryAddressChangeFor(uint ein, address newRecoveryAddress) external;
     function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s, uint timestamp)
         external;

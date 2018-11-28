@@ -239,12 +239,9 @@ contract IdentityRegistry is SignatureVerifier {
         Identity storage _identity = identityDirectory[ein];
 
         _identity.recoveryAddress = recoveryAddress;
-        _identity.associatedAddresses.insert(associatedAddress);
-        associatedAddressDirectory[associatedAddress] = ein;
-        for (uint i; i < providers.length; i++)
-            _identity.providers.insert(providers[i]);
-        for (uint j; j < resolvers.length; j++)
-            _identity.resolvers.insert(resolvers[j]);
+        addAssociatedAddress(ein, associatedAddress);
+        addProviders(ein, providers, delegated);
+        addResolvers(ein, resolvers, delegated);
 
         emit IdentityCreated(msg.sender, ein, recoveryAddress, associatedAddress, providers, resolvers, delegated);
 
@@ -253,6 +250,7 @@ contract IdentityRegistry is SignatureVerifier {
 
 
     /// @notice Allows an associated address to add another associated address to its Identity.
+    /// @param approvingAddress An associated address for an Identity.
     /// @param addressToAdd A new address to set for the Identity of the sender.
     /// @param v The v component of the signature.
     /// @param r The r component of the signature.
@@ -264,7 +262,9 @@ contract IdentityRegistry is SignatureVerifier {
         public ensureSignatureTimeValid(timestamp)
     {
         bool fromApprovingAddress = msg.sender == approvingAddress;
-        require(fromApprovingAddress || msg.sender == addressToAdd, "One or both of the passed addresses are malformed.");
+        require(
+            fromApprovingAddress || msg.sender == addressToAdd, "One or both of the passed addresses are malformed."
+        );
 
         uint ein = getEIN(approvingAddress);
 
@@ -567,10 +567,8 @@ contract IdentityRegistry is SignatureVerifier {
         emit RecoveryTriggered(msg.sender, ein, _identity.associatedAddresses.members, newAssociatedAddress);
 
         // remove identity data, and add the new address as the sole associated address
-        resetIdentityData(_identity, false);
-        _identity.recoveryAddress = msg.sender;
-        _identity.associatedAddresses.insert(newAssociatedAddress);
-        associatedAddressDirectory[newAssociatedAddress] = ein;
+        resetIdentityData(_identity, msg.sender, false);
+        addAssociatedAddress(ein, newAssociatedAddress);
     }
 
     /// @notice Allows associated addresses recently removed via recovery to permanently disable their old Identity.
@@ -595,18 +593,18 @@ contract IdentityRegistry is SignatureVerifier {
 
         emit IdentityDestroyed(msg.sender, ein, _identity.recoveryAddress, resetResolvers);
 
-        resetIdentityData(_identity, resetResolvers);
+        resetIdentityData(_identity, address(0), resetResolvers);
     }
 
     /// @dev Common logic for clearing the data of an Identity.
-    function resetIdentityData(Identity storage identity, bool resetResolvers) private {
-        address[] storage associatedAddresses = identity.associatedAddresses.members;
-        for (uint i; i < associatedAddresses.length; i++) {
-            delete associatedAddressDirectory[associatedAddresses[i]];
+    function resetIdentityData(Identity storage identity, address newRecoveryAddress, bool resetResolvers) private {
+        for (uint i; i < identity.associatedAddresses.members.length; i++) {
+            delete associatedAddressDirectory[identity.associatedAddresses.members[i]];
         }
         delete identity.associatedAddresses;
         delete identity.providers;
         if (resetResolvers) delete identity.resolvers;
+        identity.recoveryAddress = newRecoveryAddress;
     }
 
 

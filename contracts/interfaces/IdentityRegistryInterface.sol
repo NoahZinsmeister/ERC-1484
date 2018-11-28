@@ -47,28 +47,7 @@ interface IdentityRegistryInterface {
     function triggerRecoveryAddressChangeFor(uint ein, address newRecoveryAddress) external;
     function triggerRecovery(uint ein, address newAssociatedAddress, uint8 v, bytes32 r, bytes32 s, uint timestamp)
         external;
-    function triggerPoisonPill(
+    function triggerDestruction(
         uint ein, address[] calldata firstChunk, address[] calldata lastChunk, bool resetResolvers
     ) external;
-
-    // Events //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    event IdentityCreated(
-        address indexed initiator, uint indexed ein,
-        address recoveryAddress, address associatedAddress, address[] providers, address[] resolvers, bool delegated
-    );
-    event AssociatedAddressAdded(
-        address indexed initiator, uint indexed ein, address approvingAddress, address addedAddress
-    );
-    event AssociatedAddressRemoved(address indexed initiator, uint indexed ein, address removedAddress);
-    event ProviderAdded(address indexed initiator, uint indexed ein, address provider, bool delegated);
-    event ProviderRemoved(address indexed initiator, uint indexed ein, address provider, bool delegated);
-    event ResolverAdded(address indexed initiator, uint indexed ein, address resolvers);
-    event ResolverRemoved(address indexed initiator, uint indexed ein, address resolvers);
-    event RecoveryAddressChangeTriggered(
-        address indexed initiator, uint indexed ein, address oldRecoveryAddress, address newRecoveryAddress
-    );
-    event RecoveryTriggered(
-        address indexed initiator, uint indexed ein, address[] oldAssociatedAddresses, address newAssociatedAddress
-    );
-    event IdentityPoisoned(address indexed initiator, uint indexed ein, address recoveryAddress, bool resolversReset);
 }

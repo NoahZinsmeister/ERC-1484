@@ -856,7 +856,7 @@ contract('Testing Identity', function (accounts) {
       )
 
       await verifyIdentity(identity.identity, instances.IdentityRegistry, {
-        recoveryAddress:     newRecoveryAddress.address,
+        recoveryAddress:     '0x0000000000000000000000000000000000000000',
         associatedAddresses: [],
         providers:           [],
         resolvers:           []

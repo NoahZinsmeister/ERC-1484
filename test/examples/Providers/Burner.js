@@ -19,7 +19,7 @@ contract('Testing Burner Provider', function (accounts) {
   it('contracts deployed', async () => {
     instances.IdentityRegistry = await IdentityRegistry.new()
     instances.BurnerProvider = await BurnerProvider.new(instances.IdentityRegistry.address)
-    dummyPerpetualProvider = await BurnerProvider.dummyPerpetualResolver.call()
+    dummyPerpetualProvider = await instances.BurnerProvider.dummyPerpetualResolver.call()
   })
 
   user = users[0]

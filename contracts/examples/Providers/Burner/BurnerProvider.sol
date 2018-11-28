@@ -18,7 +18,7 @@ contract BurnerProvider {
     {
         address[] memory providers = new address[](0);
         address[] memory resolvers = new address[](1);
-        providers[0] = dummyPerpetualResolver;
+        resolvers[0] = dummyPerpetualResolver;
 
         uint _ein = identityRegistry.createIdentityDelegated(
             address(0), _address, providers, resolvers, v[0], r[0], s[0], timestamp[0]

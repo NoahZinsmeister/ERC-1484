@@ -17,11 +17,13 @@ module.exports = {
   },
   compilers: {
     solc: {
-      optimizer: {
-        enabled: true,
-        runs: 200
-      },
-      version: './node_modules/solc'
+      version: './node_modules/solc',
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200
+        }
+      }
     }
   }
 }

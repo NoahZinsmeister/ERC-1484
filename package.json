@@ -35,7 +35,6 @@
   ],
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "ajv": "^6.5.4",
     "ethereumjs-util": "^5.2.0",
     "ganache-cli": "^6.1.8",
     "solc": "^0.5.0",

@@ -13,7 +13,7 @@ module.exports = {
       gas: 0xfffffffffff,
       gasPrice: 0x01,
       websockets: true
-
+    }
   },
   compilers: {
     solc: {

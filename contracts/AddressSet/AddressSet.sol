@@ -12,7 +12,7 @@ library AddressSet {
     /// @dev Inserts an element into a set. If the element already exists in the set, the function is a no-op.
     /// @param self The set to insert into.
     /// @param other The element to insert.
-    function insert(Set storage self, address other) public {
+    function insert(Set storage self, address other) internal {
         if (!contains(self, other)) {
             self.memberIndices[other] = self.members.push(other);
         }
@@ -21,7 +21,7 @@ library AddressSet {
     /// @dev Removes an element from a set. If the element does not exist in the set, the function is a no-op.
     /// @param self The set to remove from.
     /// @param other The element to remove.
-    function remove(Set storage self, address other) public {
+    function remove(Set storage self, address other) internal {
         if (contains(self, other)) {
             // replace other with the last element
             self.members[self.memberIndices[other] - 1] = self.members[length(self) - 1];
@@ -37,7 +37,7 @@ library AddressSet {
     /// @param self The set to check membership in.
     /// @param other The element to check membership of.
     /// @return true if the element is in the set, false otherwise.
-    function contains(Set storage self, address other) public view returns (bool) {
+    function contains(Set storage self, address other) internal view returns (bool) {
         return ( // solium-disable-line operator-whitespace
             self.memberIndices[other] > 0 && 
             self.members.length >= self.memberIndices[other] && 
@@ -48,7 +48,7 @@ library AddressSet {
     /// @dev Returns the number of elements in a set.
     /// @param self The set to check the length of.
     /// @return The number of elements in the set.
-    function length(Set storage self) public view returns (uint) {
+    function length(Set storage self) internal view returns (uint) {
         return self.members.length;
     }
 }

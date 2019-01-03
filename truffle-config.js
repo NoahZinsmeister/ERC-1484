@@ -13,11 +13,11 @@ module.exports = {
       gas: 0xfffffffffff,
       gasPrice: 0x01,
       websockets: true
-    }
+
   },
   compilers: {
     solc: {
-      version: './node_modules/solc',
+      version: '0.5.0',
       settings: {
         optimizer: {
           enabled: true,
